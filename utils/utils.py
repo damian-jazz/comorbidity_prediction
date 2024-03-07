@@ -201,7 +201,7 @@ def deconfound_linear(subject_data: pd.DataFrame, F: pd.DataFrame) -> pd.DataFra
     F_deconf = F - reg.predict(C)
     return F_deconf
 
-def label_index_by_frequency_sorted(df: pd.DataFrame) -> list[int]:
+def label_freq_sorted(df: pd.DataFrame) -> list[int]:
     """
     Returns list of ints with indices of columns from df sorted by frequency
     """
