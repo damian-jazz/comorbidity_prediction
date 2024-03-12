@@ -70,27 +70,29 @@ def load_data(case: str):
     else:
         return
 
-def load_confounders(subject_data: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+def load_confounders(subject_data: pd.DataFrame) -> pd.DataFrame:
     """
-    Returns pd.Dataframe object with confounders: 'TIV', 'Age', 'Sex', 'Site', 'Field_Strength' 
+    Input: subject_data\n
+    Returns pd.Dataframe object with confounders
     """
+    confounders = ['Age', 'Sex', 'Site', 'Field_Strength']
     C = pd.DataFrame()
-    C['TIV'] = features['global_estimatedtotalintracranialvol']
-    C['Age'] = subject_data['Age']
-    C['Sex'] = subject_data['Sex']
-    C['Site'] = subject_data['Site']
-    C['Field_Strength'] = subject_data['Field_Strength']
 
-    # Preprocess C
+    for l in confounders:
+        C[l] = subject_data[l]
+
     C = pd.get_dummies(C, columns=['Site']) # Get 1-Hot encoding for sites
+   
     sex_dict = {'Male': 0.0, 'Female': 1.0}
     C.loc[:,'Sex'] = C['Sex'].map(sex_dict)
-
-    # Convert everything to float
+    
     for col in C:
         C[col] = C[col].astype(float)
 
     return C
+
+def load_confounder_list() -> list[str]:
+    return ['Age', 'Sex', 'EHQ_Total', 'Site', 'Field_Strength']
 
 def load_feature_subset(source: pd.DataFrame, area: str, measure_list: list[str], roi_idx: int=-1) -> pd.DataFrame:
     """
@@ -200,11 +202,11 @@ def standardize(df: pd.DataFrame):
     df_standardized[columns] = scaler.fit_transform(df_standardized[columns])
     return df_standardized
 
-def deconfound_linear(subject_data: pd.DataFrame, F: pd.DataFrame) -> pd.DataFrame:
+def deconfound_linear(C: pd.DataFrame, F: pd.DataFrame) -> pd.DataFrame:
     """
+    Parameters: confounders C and features F 
     Returns pd.Dataframe with features that have been deconfounded by substracting residual obtained with LinearRegression() 
     """
-    C = load_confounders(subject_data, F)
     reg = LinearRegression().fit(C, F)
     F_deconf = F - reg.predict(C)
     return F_deconf

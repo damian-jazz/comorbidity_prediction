@@ -30,13 +30,17 @@ def test(dataloader, device, model, loss_fn):
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
             pred = model(X)
-            print(pred.shape)
+            
             test_loss += loss_fn(pred, y).item()
-            correct += (torch.sigmoid(pred) == y).type(torch.float).sum().item() # sigmoid
-    
+
+            pred[pred < 0.5] = 0
+            pred[pred >= 0.5] = 1
+
+            correct += (pred == y).type(torch.float).sum().item()
+            
     test_loss /= num_batches
+    correct /= dataloader.dataset.labels.shape[1] # to account for multiple labels
     correct /= size
-    
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 def eval(dataloader, device, model, loss_fn):
