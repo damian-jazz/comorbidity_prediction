@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 data_path = 'data/'
 plot_path = 'plots/'
 
-########## Data loading ##########
+########## Loading data ##########
 
 def load_data(case: str):
     """
