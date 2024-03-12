@@ -10,23 +10,26 @@ plot_path = 'plots/'
 
 def load_data(case: str):
     """
-    Load data for specific case: 'classification', 'regression', 'combined' or 'all'
+    Load data for specific case: 'classification', 'classification_t1', 'regression', 'combined' or 'all'
     Returns multiple pd.Dataframe objects
     """
     # Labels
     labels_classification = pd.read_csv(data_path + 'labels_classification.csv', index_col=0)
     labels_regression = pd.read_csv(data_path + 'labels_regression.csv', index_col=0)
 
-    # FreeSurfer features for all preprocessed subjects (n=3451) 
+    # FreeSurfer features for all preprocessed subjects (n=3451)
     freesurfer_features = pd.read_csv(data_path + 'fs_features_total.csv', index_col=0)
 
-    # Subject-related features for all preprocessed subjects (n=3451) 
+    # Subject-related features for all preprocessed subjects (n=3451)
     subject_features_preprocessed = pd.read_csv(data_path + 'preprocessed_subjects.csv', index_col=0)
 
     # Subject-related features for different subsets depending on case
     subject_features_classification = pd.read_csv(data_path + 'subject_data_classification_subset.csv', index_col=0)
     subject_features_regression = pd.read_csv(data_path + 'subject_data_regression_subset.csv', index_col=0)
     subject_features_combined = pd.read_csv(data_path + 'subject_data_combined_subset.csv', index_col=0)
+
+    # Ids t1
+    t1_include = pd.read_csv(data_path + 't1_full_shape_ids.txt', header=None, names=['ID'])
 
     # Preprocessing: strip empty spaces from subject ids
     labels_classification['ID'] = labels_classification['ID'].str.strip()
@@ -39,25 +42,30 @@ def load_data(case: str):
 
     if case == 'classification':
         subject_features = subject_features_classification
-        freesurfer_features = freesurfer_features[freesurfer_features["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        classification_labels = labels_classification[labels_classification["ID"].isin(subject_features["ID"])].reset_index(drop=True)
+        freesurfer_features = freesurfer_features[freesurfer_features['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        classification_labels = labels_classification[labels_classification['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        return subject_features, freesurfer_features, classification_labels
+    elif case == 'classification_t1':
+        subject_features = subject_features_classification[subject_features_classification['ID'].isin(t1_include['ID'])].reset_index(drop=True)
+        freesurfer_features = freesurfer_features[freesurfer_features['ID'].isin(t1_include['ID'])].reset_index(drop=True)
+        classification_labels = labels_classification[labels_classification['ID'].isin(t1_include['ID'])].reset_index(drop=True)
         return subject_features, freesurfer_features, classification_labels
     elif case == 'regression':
         subject_features = subject_features_regression
-        freesurfer_features = freesurfer_features[freesurfer_features["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        regression_labels = labels_regression[labels_regression["ID"].isin(subject_features["ID"])].reset_index(drop=True)
+        freesurfer_features = freesurfer_features[freesurfer_features['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        regression_labels = labels_regression[labels_regression['ID'].isin(subject_features['ID'])].reset_index(drop=True)
         return subject_features, freesurfer_features, regression_labels
     elif case == 'combined':
         subject_features = subject_features_combined
-        freesurfer_features = freesurfer_features[freesurfer_features["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        classification_labels = labels_classification[labels_classification["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        regression_labels = labels_regression[labels_regression["ID"].isin(subject_features["ID"])].reset_index(drop=True)
+        freesurfer_features = freesurfer_features[freesurfer_features['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        classification_labels = labels_classification[labels_classification['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        regression_labels = labels_regression[labels_regression['ID'].isin(subject_features['ID'])].reset_index(drop=True)
         return subject_features, freesurfer_features, classification_labels, regression_labels
     elif case == 'all':
         subject_features = subject_features_preprocessed
-        freesurfer_features = freesurfer_features[freesurfer_features["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        classification_labels = labels_classification[labels_classification["ID"].isin(subject_features["ID"])].reset_index(drop=True)
-        regression_labels = labels_regression[labels_regression["ID"].isin(subject_features["ID"])].reset_index(drop=True)
+        freesurfer_features = freesurfer_features[freesurfer_features['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        classification_labels = labels_classification[labels_classification['ID'].isin(subject_features['ID'])].reset_index(drop=True)
+        regression_labels = labels_regression[labels_regression['ID'].isin(subject_features['ID'])].reset_index(drop=True)
         return subject_features, freesurfer_features, classification_labels, regression_labels
     else:
         return
