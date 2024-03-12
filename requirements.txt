@@ -1,0 +1,10 @@
+ipykernel
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+scikit-learn
+torch
+nibabel
+statsmodel
