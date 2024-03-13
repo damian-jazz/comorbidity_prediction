@@ -49,8 +49,7 @@ def eval(dataloader, device, model, loss_fn):
 
     model.eval()
     with torch.no_grad():
-        counter = 0
-        for X, _ in dataloader:
+        for batch, (X, _) in enumerate(dataloader):
             X = X.to(device)
             out = model(X)
 
@@ -59,10 +58,9 @@ def eval(dataloader, device, model, loss_fn):
             pred[pred >= 0.5] = 1
             pred[pred < 0.5] = 0
 
-            if counter == 0:
+            if batch == 0:
                 y_prob = prob
                 y_pred = pred
-                counter += 1
             else:
                 y_prob = torch.cat((y_prob, prob), 0)
                 y_pred = torch.cat((y_pred, pred), 0)
