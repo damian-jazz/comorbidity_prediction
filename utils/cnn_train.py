@@ -18,7 +18,6 @@ def train(dataloader, device, model, loss_fn, optimizer):
         if (batch+1 % 1 == 0):
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-            break
 
 def test(dataloader, device, model, loss_fn):
     size = len(dataloader.dataset)
