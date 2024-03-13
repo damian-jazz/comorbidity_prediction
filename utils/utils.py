@@ -70,22 +70,29 @@ def load_data(case: str):
     else:
         return
 
-def load_confounders(subject_data: pd.DataFrame) -> pd.DataFrame:
+def load_confounders(subject_data: pd.DataFrame, discrete=False) -> pd.DataFrame:
     """
     Input: subject_data\n
     Returns pd.Dataframe object with confounders
     """
-    confounders = ['Age', 'Sex', 'Site', 'Field_Strength']
+    if discrete == True:
+        confounders = ['Age', 'Sex', 'Site', 'Field_Strength', 'Cohort']
+    else:
+        confounders = ['Age', 'Sex', 'Site', 'Field_Strength']
+    
     C = pd.DataFrame()
-
     for l in confounders:
         C[l] = subject_data[l]
 
     C = pd.get_dummies(C, columns=['Site']) # Get 1-Hot encoding for sites
-   
+
     sex_dict = {'Male': 0.0, 'Female': 1.0}
     C.loc[:,'Sex'] = C['Sex'].map(sex_dict)
-    
+
+    if discrete == True:
+        C = pd.get_dummies(C, columns=['Cohort'])
+        C = pd.get_dummies(C, columns=['Field_Strength'])
+
     for col in C:
         C[col] = C[col].astype(float)
 
@@ -183,14 +190,18 @@ def load_measurement_labels():
 
 ########## Helper methods ###########
 
-def remove_zero_features(df: pd.DataFrame):
+def remove_zero_features(df: pd.DataFrame, return_deleted=False):
     """
     Returns pd.Dataframe and list with labels that have been removed 
     """
     zero_cols = df.columns[df.eq(0).all()]
     df = df.drop(zero_cols, axis=1)
     affected_label_names = zero_cols.tolist()
-    return df, affected_label_names
+
+    if return_deleted == True:
+        return df, affected_label_names
+    else:
+        return df
 
 def standardize(df: pd.DataFrame):
     """
