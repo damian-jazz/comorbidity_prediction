@@ -4,7 +4,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 
 data_path = 'data/'
-plot_path = 'plots/'
 
 ########## Loading data ##########
 
@@ -70,13 +69,16 @@ def load_data(case: str):
     else:
         return
 
-def load_confounders(subject_data: pd.DataFrame, discrete=False) -> pd.DataFrame:
+def load_confounders(subject_data: pd.DataFrame, case='standard') -> pd.DataFrame:
     """
-    Input: subject_data\n
+    subject_data: input df
+    case: standard, discrete or raw
     Returns pd.Dataframe object with confounders
     """
-    if discrete == True:
+    if case == 'discrete':
         confounders = ['Age', 'Sex', 'Site', 'Field_Strength', 'Cohort']
+    elif case == 'raw':
+        confounders = ['Age', 'Sex', 'Site', 'Cohort']
     else:
         confounders = ['Age', 'Sex', 'Site', 'Field_Strength']
     
@@ -84,17 +86,18 @@ def load_confounders(subject_data: pd.DataFrame, discrete=False) -> pd.DataFrame
     for l in confounders:
         C[l] = subject_data[l]
 
-    C = pd.get_dummies(C, columns=['Site']) # Get 1-Hot encoding for sites
-
-    sex_dict = {'Male': 0.0, 'Female': 1.0}
-    C.loc[:,'Sex'] = C['Sex'].map(sex_dict)
-
-    if discrete == True:
+    if case == 'discrete':
         C = pd.get_dummies(C, columns=['Cohort'])
         C = pd.get_dummies(C, columns=['Field_Strength'])
 
-    for col in C:
-        C[col] = C[col].astype(float)
+    if case == 'standard' or case == 'discrete':
+        C = pd.get_dummies(C, columns=['Site']) # Get 1-Hot encoding for sites
+
+        sex_dict = {'Male': 0.0, 'Female': 1.0}
+        C.loc[:,'Sex'] = C['Sex'].map(sex_dict)
+    
+        for col in C:
+            C[col] = C[col].astype(float)
 
     return C
 
@@ -231,12 +234,30 @@ def label_freq_sorted(df: pd.DataFrame) -> list[int]:
     index_list = [label_mapping[label] for label in label_sorted_by_frequency]
     return index_list
 
-def generate_label_stats(df: pd.DataFrame) -> pd.DataFrame:
+def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
     """
-    Returns pd.Dataframe with label statistics
+    Returns pd.Dataframe with label statistics and optionally also mean_ir
     """
-    new_df = pd.DataFrame({
-    'Mean': df.mean(),
-    'Sum': df.sum()
+    diagnosis_counts = dict()
+    ir_dict = dict()
+
+    for name, _ in df.items():
+        diagnosis_counts[name] = df[name].value_counts()[1]
+
+    max_value = max(diagnosis_counts.values())
+
+    for k,v in diagnosis_counts.items():
+        ir_dict[k] = (max_value / v)
+
+    stats = pd.DataFrame({
+    'Absolute frequency': df.mean(),
+    'Relative frequency': df.sum(),
+    'Imbalance ratio': ir_dict.values(),
     })
-    return new_df
+
+    mean_ratio = np.mean(list(ir_dict.values())) 
+    
+    if not mean_ir:
+        return stats
+    else:
+        return stats, mean_ratio
