@@ -5,6 +5,7 @@ matplotlib
 seaborn
 scipy
 scikit-learn
+umap-learn
 torch
 nibabel
 statsmodels
