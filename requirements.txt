@@ -7,4 +7,4 @@ scipy
 scikit-learn
 torch
 nibabel
-statsmodel
+statsmodels
