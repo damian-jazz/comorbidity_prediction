@@ -49,7 +49,7 @@ class datasetT1(Dataset):
     def __getitem__(self, idx):
         id = self.ids.iloc[idx]
         label = self.labels.iloc[idx]
-        img_path = glob.glob(f"{self.source_path}sub-{id}_*_{self.modality}*.nii.gz")[0]
+        img_path = glob.glob(f"{self.source_path}sub-{id}_*{self.modality}*.nii.gz")[0]
         img_data = nib.load(img_path).get_fdata().astype(np.single)
 
         # Preprocessing

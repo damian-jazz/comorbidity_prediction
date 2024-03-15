@@ -36,12 +36,6 @@ epochs = args.epochs
 run = args.run
 source_path = args.source_path
 
-# Modality string
-if modality != 'T1w':
-    modality_string = modality.split('-')[1]
-else:
-    modality_string = modality
-
 # Set up paths
 source_path = os.path.expanduser("~") + source_path
 run_path = "runs/"
@@ -51,7 +45,7 @@ checkpoints_path = "checkpoints/"
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename=f'{run_path}training_run_{run}_modality_{modality_string}.log',
+                    filename=f'{run_path}training_run_{run}_modality_{modality}.log',
                     filemode='w')
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
@@ -60,7 +54,7 @@ console.setFormatter(formatter)
 logging.getLogger().addHandler(console)
 
 # Device
-device = f"cuda:{device_index}"
+device = "cuda:" + str(device_index)
 logging.info(f"Using {device} device")
 
 # Load and split data
@@ -91,4 +85,4 @@ for epoch in range(epochs):
     train_with_logging(train_dataloader, device, model, loss_fn, optimizer, logging)
     test_with_logging(test_dataloader, device, model, loss_fn, logging)
 
-    torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality_string}_epoch_{epoch}.pth")
+    torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_epoch_{epoch}.pth")
