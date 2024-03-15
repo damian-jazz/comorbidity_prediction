@@ -83,8 +83,8 @@ def plot_diagnosis_methods(df: pd.DataFrame, set_tag: str):
 def plot_umap_cluster(df: pd.DataFrame, set_tag: str, ebd: any):
     fig = plt.figure(1,(15,14))
 
-    for k in range(13):
-        plt.subplot(4,4,k+1)
+    for k in range(df.shape[1]):
+        plt.subplot(4, 4, k+1)
         selec = df[df.columns[k]] != 0
         plt.scatter(ebd[~selec,0], ebd[~selec,1], s=2, c='lightgray', alpha=.1)
         plt.scatter(ebd[selec,0], ebd[selec,1], s=2, c='orange', alpha=.6)
