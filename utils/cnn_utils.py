@@ -36,11 +36,11 @@ def crop_center(data, out_sp):
     return data_crop
 
 class datasetT1(Dataset):
-    def __init__(self, ids, labels, modality, base_dir, out_shape=(200, 240, 200)):
+    def __init__(self, ids, labels, modality, source_path, out_shape=(200, 240, 200)):
         self.ids = ids
         self.labels = labels
         self.modality = modality
-        self.base_dir = base_dir
+        self.source_path = source_path
         self.out_shape = out_shape
 
     def __len__(self):
@@ -49,7 +49,7 @@ class datasetT1(Dataset):
     def __getitem__(self, idx):
         id = self.ids.iloc[idx]
         label = self.labels.iloc[idx]
-        img_path = glob.glob(f"{self.base_dir}sub-{id}_*_{self.modality}*.nii.gz")[0]
+        img_path = glob.glob(f"{self.source_path}sub-{id}_*_{self.modality}*.nii.gz")[0]
         img_data = nib.load(img_path).get_fdata().astype(np.single)
 
         # Preprocessing
