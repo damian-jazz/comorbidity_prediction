@@ -37,7 +37,7 @@ run = args.run
 source_path = args.source_path
 
 # Modality string
-if modality is not 'T1w':
+if modality != 'T1w':
     modality_string = modality.split('-')[1]
 else:
     modality_string = modality
@@ -72,7 +72,8 @@ X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size=
 training_data = datasetT1(X_train, Y_train, modality=modality, source_path=source_path) 
 test_data = datasetT1(X_test, Y_test, modality=modality, source_path=source_path) 
 
-batch_size = 2
+batch_size = 8
+logging.info(f"Using batch size {batch_size}")
 train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True) 
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
