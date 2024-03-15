@@ -1,4 +1,6 @@
 .DS_Store
 data/*
 plots/*
+checkpoints/*
+runs/*
 __pycache__/
