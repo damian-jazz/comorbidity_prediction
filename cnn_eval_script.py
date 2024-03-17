@@ -16,7 +16,6 @@ from sklearn.utils import resample
 from sklearn.metrics import average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss
 
 import torch
-from torch import nn
 from torch.utils.data import DataLoader
 
 
