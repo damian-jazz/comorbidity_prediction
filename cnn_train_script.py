@@ -47,7 +47,7 @@ checkpoints_path = base_path + "checkpoints/"
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename=f'{run_path}training_run_{run}_modality_{modality}_loss_{loss}.log',
+                    filename=f'{run_path}training_run_{run}_sfcn_{modality}_{loss}.log',
                     filemode='w')
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
