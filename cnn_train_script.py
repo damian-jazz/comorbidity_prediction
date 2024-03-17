@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 from utils.utils import load_data
-from utils.cnn_utils import datasetT1
+from utils.cnn_utils import datasetT1, sigmoid_focal_loss
 from utils.cnn_train import train_with_logging, test_with_logging
 from utils.cnn_model import SFCN
 
@@ -25,15 +25,17 @@ parser.add_argument("-device_index", type=int, default=0)
 parser.add_argument("-epochs", type=int, default=1)
 parser.add_argument("-run", type=int, default=1)
 parser.add_argument("-modality", type=str, default="T1w")
+parser.add_argument("-loss", type=str, default="bce")
 parser.add_argument("-source_path", type=str, default="/t1images/")
 
 # Parse the arguments
 args = parser.parse_args()
 
 device_index =  args.device_index
-modality = args.modality
 epochs = args.epochs
 run = args.run
+modality = args.modality
+loss = args.loss
 source_path = args.source_path
 
 # Set up paths
@@ -59,6 +61,7 @@ logging.info(f"source_path: {source_path}")
 logging.info(f"run_path: {run_path}")
 logging.info(f"checkpoints_path: {checkpoints_path}")
 logging.info(f"modality: {modality}")
+logging.info(f"loss: {modality}")
 
 # Device
 device = "cuda:" + str(device_index)
@@ -82,7 +85,11 @@ test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 model = SFCN(output_dim=13)
 model.to(device)
 
-loss_fn = nn.BCEWithLogitsLoss()
+if loss == 'bce':
+    loss_fn = nn.BCEWithLogitsLoss()
+elif loss == 'focal':
+    loss_fn = sigmoid_focal_loss()
+
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 # Training loop
