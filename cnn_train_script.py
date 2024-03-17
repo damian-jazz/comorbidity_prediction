@@ -53,6 +53,12 @@ formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger().addHandler(console)
 
+# Log path variables
+logging.info(f"Using base_path: {base_path}")
+logging.info(f"Using source_path: {source_path}")
+logging.info(f"Using run_path: {run_path}")
+logging.info(f"Using checkpoints_path: {checkpoints_path}")
+
 # Device
 device = "cuda:" + str(device_index)
 logging.info(f"Using {device} device")
