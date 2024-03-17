@@ -89,7 +89,7 @@ def train_with_logging(dataloader, device, model, loss_fn, optimizer, logging, p
             loss, current = loss.item(), (batch + 1) * len(X)
             logging.info(f"\tTrain loss: {loss:.4f}  [{current:>5d}/{size:>5d}]") 
     
-    logging.info(f"\tFinal train loss: {loss:.4f}") 
+    logging.info(f"\tTrain loss: {loss:.4f}") 
 
 def test_with_logging(dataloader, device, model, loss_fn, logging):
     size = len(dataloader.dataset)

@@ -54,14 +54,15 @@ console.setFormatter(formatter)
 logging.getLogger().addHandler(console)
 
 # Log path variables
-logging.info(f"Using base_path: {base_path}")
-logging.info(f"Using source_path: {source_path}")
-logging.info(f"Using run_path: {run_path}")
-logging.info(f"Using checkpoints_path: {checkpoints_path}")
+logging.info(f"base_path: {base_path}")
+logging.info(f"source_path: {source_path}")
+logging.info(f"run_path: {run_path}")
+logging.info(f"checkpoints_path: {checkpoints_path}")
+logging.info(f"modality: {modality}")
 
 # Device
 device = "cuda:" + str(device_index)
-logging.info(f"Using {device} device")
+logging.info(f"device: {device}")
 
 # Load and split data
 X, _, Y = load_data('classification_t1')
@@ -73,7 +74,7 @@ training_data = datasetT1(X_train, Y_train, modality=modality, source_path=sourc
 test_data = datasetT1(X_test, Y_test, modality=modality, source_path=source_path) 
 
 batch_size = 8
-logging.info(f"Using batch size {batch_size}")
+logging.info(f"batch size: {batch_size}")
 train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True) 
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
