@@ -93,7 +93,7 @@ brier = []
 hamm = []
 f1 = []
 
-for i in range(100):
+for i in range(1):
     X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
 
     eval_data = datasetT1(X_test_resampled, y_test_resampled, modality=modality, source_path=source_path)
