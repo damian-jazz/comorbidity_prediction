@@ -84,13 +84,7 @@ logging.info(f"batch size: {batch_size}")
 # Instantiate model and load params from checkpoint
 model = SFCN(output_dim=13)
 model.to(device)
-
-if loss == 'bce':
-    model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_cnn_{modality}_epoch_{epoch}.pth"))
-elif loss == 'focal':
-    model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_cnn_{modality}_{loss}_epoch_{epoch}.pth"))
-else:
-    pass
+model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_epoch_{epoch}.pth"))
 
 # Evaluation
 auprc = []
@@ -102,7 +96,7 @@ f1 = []
 for i in range(100):
     X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
 
-    eval_data = datasetT1(X_test_resampled, y_test_resampled)
+    eval_data = datasetT1(X_test_resampled, y_test_resampled, modality=modality, source_path=source_path)
     eval_dataloader = DataLoader(eval_data, batch_size=batch_size, shuffle=False)
     y_prob, y_pred  = eval(eval_dataloader, device, model)
 

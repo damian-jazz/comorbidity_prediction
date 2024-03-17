@@ -97,9 +97,9 @@ for epoch in range(epochs):
     if loss == 'bce':
         train(train_dataloader, device, model, loss_fn, optimizer, logging)
         test(test_dataloader, device, model, loss_fn, logging)
-        torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_epoch_{epoch}.pth")
 
     elif loss == 'focal':
         train_focal(train_dataloader, device, model, optimizer, logging)
         test_focal(test_dataloader, device, model, logging)
-        torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_{loss}_epoch_{epoch}.pth")
+    
+    torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_sfcn_{modality}_{loss}_epoch_{epoch}.pth")
