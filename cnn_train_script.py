@@ -8,7 +8,7 @@ import numpy as np
 
 from utils.utils import load_data
 from utils.cnn_utils import datasetT1, sigmoid_focal_loss
-from utils.cnn_train import train_with_logging, test_with_logging
+from utils.cnn_train import train, test, train_focal, test_focal
 from utils.cnn_model import SFCN
 
 from sklearn.model_selection import train_test_split
@@ -87,8 +87,6 @@ model.to(device)
 
 if loss == 'bce':
     loss_fn = nn.BCEWithLogitsLoss()
-elif loss == 'focal':
-    loss_fn = sigmoid_focal_loss()
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
@@ -96,7 +94,11 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 for epoch in range(epochs):
     logging.info(f"Epoch {epoch + 1}/{epochs}")
 
-    train_with_logging(train_dataloader, device, model, loss_fn, optimizer, logging)
-    test_with_logging(test_dataloader, device, model, loss_fn, logging)
+    if loss == 'bce':
+        train(train_dataloader, device, model, loss_fn, optimizer, logging)
+        test(test_dataloader, device, model, loss_fn, logging)
+    elif loss == 'focal':
+        train_focal(train_dataloader, device, model, optimizer, logging)
+        test_focal(test_dataloader, device, model, logging)
 
     torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_{loss}_epoch_{epoch}.pth")
