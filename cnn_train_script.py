@@ -99,4 +99,4 @@ for epoch in range(epochs):
     train_with_logging(train_dataloader, device, model, loss_fn, optimizer, logging)
     test_with_logging(test_dataloader, device, model, loss_fn, logging)
 
-    torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_epoch_{epoch}.pth")
+    torch.save(model.state_dict(), checkpoints_path +  f"run_{run}_cnn_{modality}_{loss}_epoch_{epoch}.pth")
