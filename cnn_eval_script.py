@@ -102,8 +102,8 @@ for i in range(2):
 
     # Compute brier score
     brier_scores = np.zeros(y_prob.shape[1])
-    for i in range(y_prob.shape[1]):
-        brier_scores[i] = brier_score_loss(y_test_resampled.iloc[:,i], y_prob[:,i])
+    for j in range(y_prob.shape[1]):
+        brier_scores[j] = brier_score_loss(y_test_resampled.iloc[:,j], y_prob[:,j])
     brier.append(brier_scores.mean())
     
     # Other metrics
@@ -111,7 +111,7 @@ for i in range(2):
     auroc.append(roc_auc_score(y_test_resampled, y_prob, average='macro'))
     f1.append(f1_score(y_test_resampled, y_pred, average='micro'))
     hamm.append(hamming_loss(y_test_resampled, y_pred))
-    logging.info(f"Bootstrapping iteration {i+1}")
+    logging.info(f"Bootstrapping iteration {i}")
 
 logging.info(f"Mean scores for 3D-CNN with 95% confidence intervals:")
 logging.info("AUPRC macro: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(auprc), np.percentile(auprc, 2.5), np.percentile(auprc, 97.5)))
