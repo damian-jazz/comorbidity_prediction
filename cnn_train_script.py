@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 from utils.utils import load_data
-from utils.cnn_utils import datasetT1, sigmoid_focal_loss
+from utils.cnn_utils import datasetT1
 from utils.cnn_train import train, test, train_focal, test_focal
 from utils.cnn_model import SFCN
 
