@@ -82,7 +82,7 @@ model = SFCN(output_dim=13)
 model.to(device)
 
 loss_fn = nn.BCEWithLogitsLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 # Training loop
 for epoch in range(epochs):
