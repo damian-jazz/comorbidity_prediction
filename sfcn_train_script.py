@@ -97,7 +97,6 @@ for epoch in range(epochs):
     if loss == 'bce':
         train(train_dataloader, device, model, loss_fn, optimizer, logging)
         test(test_dataloader, device, model, loss_fn, logging)
-
     elif loss == 'focal':
         train_focal(train_dataloader, device, model, optimizer, logging)
         test_focal(test_dataloader, device, model, logging)
