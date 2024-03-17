@@ -1,8 +1,8 @@
 from torch import nn
 
-class MLMLP(nn.Module):
+class MLP(nn.Module):
     def __init__(self, input_dim=922, output_dim=13):
-        super(MLMLP, self).__init__()
+        super(MLP, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
 
