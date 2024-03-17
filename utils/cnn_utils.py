@@ -54,7 +54,8 @@ class datasetT1(Dataset):
 
         # Preprocessing
         img_data = img_data / img_data.mean()
-        img_data = crop_center(img_data, self.out_shape)
+        img_data = img_data[22:222,28:268,1:201]
+        #img_data = crop_center(img_data, self.out_shape)
 
         img_tensor = torch.from_numpy(img_data)
         label_tensor = torch.tensor(label.tolist(), dtype=torch.float32)
