@@ -40,14 +40,14 @@ source_path = args.source_path
 
 # Set up paths
 base_path = os.path.expanduser("~") + "/comorbidity_prediction/"
-run_path = base_path + "runs/"
+logs_path = base_path + "logs/"
 checkpoints_path = base_path + "checkpoints/"
 
 # Configure logging settings
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename=f'{run_path}training_run_{run}_sfcn_{modality}_{loss}.log',
+                    filename=f'{logs_path}training_run_{run}_sfcn_{modality}_{loss}.log',
                     filemode='w')
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
@@ -58,7 +58,7 @@ logging.getLogger().addHandler(console)
 # Log path variables
 logging.info(f"base_path: {base_path}")
 logging.info(f"source_path: {source_path}")
-logging.info(f"run_path: {run_path}")
+logging.info(f"logs_path: {logs_path}")
 logging.info(f"checkpoints_path: {checkpoints_path}")
 logging.info(f"modality: {modality}")
 logging.info(f"loss: {loss}")
