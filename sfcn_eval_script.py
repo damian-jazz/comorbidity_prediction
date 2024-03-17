@@ -7,9 +7,9 @@ import pandas as pd
 import numpy as np
 
 from utils.utils import load_data
-from utils.cnn_utils import datasetT1
-from utils.cnn_train import eval
-from utils.cnn_model import SFCN
+from utils.sfcn_utils import datasetT1
+from utils.sfcn_train import eval
+from utils.sfcn_model import SFCN
 
 from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
