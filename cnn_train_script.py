@@ -37,7 +37,7 @@ run = args.run
 source_path = args.source_path
 
 # Set up paths
-base_path = os.path.expanduser("~") + "comorbity_prediction/"
+base_path = os.path.expanduser("~") + "/comorbity_prediction/"
 run_path = base_path + "runs/"
 checkpoints_path = base_path + "checkpoints/"
 
