@@ -37,9 +37,9 @@ run = args.run
 source_path = args.source_path
 
 # Set up paths
-source_path = os.path.expanduser("~") + source_path
-run_path = "runs/"
-checkpoints_path = "checkpoints/"
+base_path = os.path.expanduser("~") + "comorbity_prediction/"
+run_path = base_path + "runs/"
+checkpoints_path = base_path + "checkpoints/"
 
 # Configure logging settings
 logging.basicConfig(level=logging.INFO,
