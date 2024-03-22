@@ -308,7 +308,45 @@ def compute_atomic(estimator, X_test, Y_test, iteration):
 
         return score_dict
 
-def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor):
+def compute_atomic_chain(estimator, X_test, Y_test, iteration):
+        
+        X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+iteration)
+
+        Y_prob = estimator.predict_proba(X_test_resampled)
+        Y_pred = estimator.predict(X_test_resampled)
+    
+        # Compute brier score
+        brier_w = 0
+        acc_w = 0
+        brier_scores = np.zeros(Y_test.shape[1])
+        acc_scores = np.zeros(Y_test.shape[1])
+
+        for i in range(Y_test.shape[1]):    
+            brier_scores[i] = brier_score_loss(y_test_resampled.iloc[:,i], Y_prob[:, i])
+            acc_scores[i] = balanced_accuracy_score(y_test_resampled.iloc[:,i], Y_pred[:, i])
+            
+            brier_w += brier_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+            acc_w += acc_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+
+        # Store results
+        score_dict = {
+               'auprc_macro': average_precision_score(y_test_resampled, Y_prob, average='macro'),
+               'auprc_weighted': average_precision_score(y_test_resampled, Y_prob, average='weighted'),
+               'auroc_macro': roc_auc_score(y_test_resampled, Y_prob, average='macro'),
+               'auroc_weighted': roc_auc_score(y_test_resampled, Y_prob, average='weighted'),
+               'brier_macro': brier_scores.mean(),
+               'brier_weighted': brier_w / Y_test.shape[1],
+               'balanced_accuracy_macro': acc_scores.mean(),
+               'balanced_accuracy_weighted': acc_w / Y_test.shape[1],
+               'f1_micro': f1_score(y_test_resampled, Y_pred, average='micro'),
+               'hamming': hamming_loss(y_test_resampled, Y_pred),
+               'subset_accuracy': accuracy_score(y_test_resampled, Y_pred),
+        }
+
+        return score_dict
+
+
+def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor, chain=False):
 
     score_dict = {
             'auprc_macro': [],
@@ -324,7 +362,10 @@ def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor):
             'subset_accuracy': [],
     }
 
-    scores = [compute_atomic(fitted_estimator, X_test, Y_test, i) for i in range(boot_iter)]
+    if chain == True:
+        scores = [compute_atomic_chain(fitted_estimator, X_test, Y_test, i) for i in range(boot_iter)]
+    else:
+        scores = [compute_atomic(fitted_estimator, X_test, Y_test, i) for i in range(boot_iter)]
 
     # Aggregate scores
     for k,_ in score_dict.items():
