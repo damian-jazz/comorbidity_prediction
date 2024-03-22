@@ -327,9 +327,9 @@ def generate_undersampled_set(X: pd.DataFrame, Y: pd.DataFrame):
     Y_under = Y_under.drop(Y_select.index, errors='ignore')
     X_under = X_under.drop(Y_select.index, errors='ignore')
 
-    # 2. Exclude 4/5 of all ADHD-only samples
+    # 2. Exclude 70% of all ADHD-only samples
     Y_select = Y_under[(Y_under['Attention_Deficit_HyperactivityDisorder'] == 1) & (Y_under.loc[:, Y.columns != 'Attention_Deficit_HyperactivityDisorder'].sum(axis=1) == 0)]
-    Y_select = Y_select.sample(frac=9/10, random_state=1)
+    Y_select = Y_select.sample(frac=0.7, random_state=1)
     Y_under = Y_under.drop(Y_select.index, errors='ignore')
     X_under = X_under.drop(Y_select.index, errors='ignore')
 
@@ -342,7 +342,6 @@ def generate_undersampled_set(X: pd.DataFrame, Y: pd.DataFrame):
     labels_to_exclude.remove('SpecificLearningDisorder')
     for l in labels_to_exclude:
         Y_select = Y_select[Y_select[l] == 0]
-        return X_under, Y_under
     
     Y_under = Y_under.drop(Y_select.index, errors='ignore')
     X_under = X_under.drop(Y_select.index, errors='ignore')
@@ -357,6 +356,30 @@ def generate_undersampled_set(X: pd.DataFrame, Y: pd.DataFrame):
     for l in labels_to_exclude:
         Y_select = Y_select[Y_select[l] == 0]
     
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 5. Exlude additional ADHD samples
+    Y_select = Y_under[Y_under.iloc[:,2]==1]
+    Y_select = Y_select.sample(frac=0.6, random_state=1)
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 5. Exlude additional SpecificLearningDisorder samples
+    Y_select = Y_under[Y_under.iloc[:,7]==1]
+    Y_select = Y_select.sample(frac=0.3, random_state=1)
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 6. Exlude additional AnxietyDisorders samples
+    Y_select = Y_under[Y_under.iloc[:,-1]==1]
+    Y_select = Y_select.sample(frac=0.4, random_state=1)
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 7. Exlude additional CommunicationDisorder samples
+    Y_select = Y_under[Y_under.iloc[:,5]==1]
+    Y_select = Y_select.sample(frac=0.5, random_state=1)
     Y_under = Y_under.drop(Y_select.index, errors='ignore')
     X_under = X_under.drop(Y_select.index, errors='ignore')
 
@@ -475,9 +498,85 @@ def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, chain=False):
     for k,v in score_dict.items():
         print(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
 
+########## Binary scoring ###########
+
+def compute_atomic_binary(estimators, X_test, Y_test, iteration):
+        
+        X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+iteration)
+
+        # Combine prediction probas into single ndarray
+        for l, label in enumerate(Y_test.columns):
+            if l == 0:
+                Y_prob = estimators[label].predict_proba(X_test_resampled)[:, 1].reshape(-1,1)
+                Y_pred = estimators[label].predict(X_test_resampled).reshape(-1,1)
+            else:
+                Y_prob = np.concatenate((Y_prob, estimators[label].predict_proba(X_test_resampled)[:, 1].reshape(-1,1)), axis=1)
+                Y_pred = np.concatenate((Y_pred, estimators[label].predict(X_test_resampled).reshape(-1,1)), axis=1)
+
+        
+        # Compute brier score
+        brier_w = 0
+        acc_w = 0
+        brier_scores = np.zeros(Y_test.shape[1])
+        acc_scores = np.zeros(Y_test.shape[1])
+
+        for i in range(Y_test.shape[1]):    
+            brier_scores[i] = brier_score_loss(y_test_resampled.iloc[:,i], Y_prob[:, i])
+            acc_scores[i] = balanced_accuracy_score(y_test_resampled.iloc[:,i], Y_pred[:, i])
+            
+            brier_w += brier_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+            acc_w += acc_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+
+        # Store results
+        score_dict = {
+               'auprc_macro': average_precision_score(y_test_resampled, Y_prob, average='macro'),
+               'auprc_weighted': average_precision_score(y_test_resampled, Y_prob, average='weighted'),
+               'auroc_macro': roc_auc_score(y_test_resampled, Y_prob, average='macro'),
+               'auroc_weighted': roc_auc_score(y_test_resampled, Y_prob, average='weighted'),
+               'brier_macro': brier_scores.mean(),
+               'brier_weighted': brier_w / Y_test.shape[1],
+               'balanced_accuracy_macro': acc_scores.mean(),
+               'balanced_accuracy_weighted': acc_w / Y_test.shape[1],
+               'f1_micro': f1_score(y_test_resampled, Y_pred, average='micro'),
+               'hamming': hamming_loss(y_test_resampled, Y_pred),
+               'subset_accuracy': accuracy_score(y_test_resampled, Y_pred),
+        }
+
+        return score_dict
+
+def compute_scores_binary(fitted_estimators, X_test, Y_test, boot_iter):
+
+    score_dict = {
+            'auprc_macro': [],
+            'auprc_weighted': [],
+            'auroc_macro': [],
+            'auroc_weighted': [],
+            'brier_macro': [],
+            'brier_weighted': [],
+            'balanced_accuracy_macro': [],
+            'balanced_accuracy_weighted': [],
+            'f1_micro': [],
+            'hamming': [],
+            'subset_accuracy': [],
+    }
+
+    scores = [compute_atomic_binary(fitted_estimators, X_test, Y_test, i) for i in range(boot_iter)]
+
+    # Aggregate scores
+    for k,_ in score_dict.items():
+        for dict in scores:
+            score_dict[k].append(dict[k])
+
+    print(f"Mean scores with SE and 95% confidence intervals:\n")
+
+    for k,v in score_dict.items():
+        print(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+
+
 ########## Univariate scoring ###########
         
-def compute_univariate_scores(X_train, X_test, Y_train, Y_test, area, measure_list, metric, boot_iter):
+def compute_scores_univariate(X_train, X_test, Y_train, Y_test, area, measure_list, metric, boot_iter):
     measure_dicts = []
 
     for m in measure_list:
@@ -513,7 +612,7 @@ def compute_univariate_scores(X_train, X_test, Y_train, Y_test, area, measure_li
     
     return measure_dicts
 
-def compute_univariate_scores_global(X_train, X_test, Y_train, Y_test, measure_list, metric, boot_iter):
+def compute_global_scores_univariate(X_train, X_test, Y_train, Y_test, measure_list, metric, boot_iter):
 
     score_dict = {}
 
@@ -549,7 +648,7 @@ def compute_univariate_scores_global(X_train, X_test, Y_train, Y_test, measure_l
     
     return score_dict
 
-def compute_univariate_auroc_scores(X_train, X_test, Y_train, Y_test, boot_iter):
+def compute_auroc_scores_univariate(X_train, X_test, Y_train, Y_test, boot_iter):
 
     score_dict = {}
 
