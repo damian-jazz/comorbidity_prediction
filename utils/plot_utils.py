@@ -7,12 +7,15 @@ import seaborn as sns
 plot_path = 'plots/'
 
 def plot_demographics(df: pd.DataFrame, set_tag: str):
-    #palette = 'bright' # 'Set2'
+    palette = 'Set2' # 'bright' 
     fig = plt.figure(1,(14,4))
 
-    g1 = plt.subplot(1,3,1)
-    sns.histplot(x='Age', data=df, hue='Sex', bins=100, multiple="dodge")
+    plt.subplot(1,3,1)
+    #sns.histplot(x='Age', data=df, hue='Sex', bins=100, multiple="dodge")
+    g1 = sns.histplot(x='Age', data=df, bins=55, kde=True)
     g1.set(ylabel=None)
+    g1.set_yticklabels([])
+    g1.set_yticks([])
     #plt.title("Age")
 
     #plt.subplot(2,2,2)
@@ -24,15 +27,16 @@ def plot_demographics(df: pd.DataFrame, set_tag: str):
     #plt.title("Cohort")
 
     plt.subplot(1,3,2)
-    g3 = sns.countplot(x='Sex', data=df)
+    g3 = sns.countplot(data=df, x='Site', hue='Sex', palette=palette)
     g3.bar_label(g3.containers[0], label_type='center')
-    g3.set(ylabel=None)
+    g3.bar_label(g3.containers[1], label_type='center')
+    #g3.set(ylabel=None)
     #plt.title("Sex")
 
     plt.subplot(1,3,3)
-    g4 = sns.countplot(x='Site', data=df)
-    g4.bar_label(g4.containers[0], label_type='center')
-    g4.set(ylabel=None)
+    sns.violinplot(data=df, x='Site', y='Age', hue='Sex', palette=palette, density_norm='count', inner='quart', legend=None, fill=False, split=True, gap=0.2)
+    #g4.bar_label(g4.containers[0], label_type='center')
+    #g4.set(ylabel=None)
     #plt.title("Site")
 
     plt.suptitle(f"Demographic statistics for {set_tag} set (n={df.shape[0]})")
