@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss, balanced_accuracy_score, accuracy_score, r2_score
+from sklearn.utils import resample
 
 data_path = 'data/'
 
@@ -161,11 +163,11 @@ def load_feature_subset(source: pd.DataFrame, area: str, measure_list: list[str]
     
     return X
 
-def load_roi_labels():
+def load_roi_labels(df: pd.DataFrame):
     """
     Returns 2 lists: roi labels for aseg and for aparc
     """
-    df = pd.read_csv(data_path + 'fs_features_total.csv', index_col=0)
+    #df = pd.read_csv(data_path + 'fs_features_total.csv', index_col=0)
 
     #aseg
     aseg_rois = load_feature_subset(df,'aseg',["Area_mm2"],-1)
@@ -261,3 +263,171 @@ def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
         return stats
     else:
         return stats, mean_ratio
+    
+########## Multi-label scoring ###########
+    
+def compute_atomic(estimator, X_test, Y_test, iteration):
+        
+        X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+iteration)
+
+        Y_prob = estimator.predict_proba(X_test_resampled)
+        Y_pred = estimator.predict(X_test_resampled)
+
+        # Combine prediction probas into single ndarray
+        Y_prob_merged = Y_prob[0][:,1].reshape(-1,1)
+        for i in range(1, len(Y_test.columns), 1):
+                Y_prob_merged = np.concatenate([Y_prob_merged, Y_prob[i][:,1].reshape(-1,1)], axis=1)
+        
+        # Compute brier score
+        brier_w = 0
+        acc_w = 0
+        brier_scores = np.zeros(Y_test.shape[1])
+        acc_scores = np.zeros(Y_test.shape[1])
+
+        for i in range(Y_test.shape[1]):    
+            brier_scores[i] = brier_score_loss(y_test_resampled.iloc[:,i], Y_prob_merged[:, i])
+            acc_scores[i] = balanced_accuracy_score(y_test_resampled.iloc[:,i], Y_pred[:, i])
+            
+            brier_w += brier_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+            acc_w += acc_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+
+        # Store results
+        score_dict = {
+               'auprc_macro': average_precision_score(y_test_resampled, Y_prob_merged, average='macro'),
+               'auprc_weighted': average_precision_score(y_test_resampled, Y_prob_merged, average='weighted'),
+               'auroc_macro': roc_auc_score(y_test_resampled, Y_prob_merged, average='macro'),
+               'auroc_weighted': roc_auc_score(y_test_resampled, Y_prob_merged, average='weighted'),
+               'brier_macro': brier_scores.mean(),
+               'brier_weighted': brier_w / Y_test.shape[1],
+               'balanced_accuracy_macro': acc_scores.mean(),
+               'balanced_accuracy_weighted': acc_w / Y_test.shape[1],
+               'f1_micro': f1_score(y_test_resampled, Y_pred, average='micro'),
+               'hamming': hamming_loss(y_test_resampled, Y_pred),
+               'subset_accuracy': accuracy_score(y_test_resampled, Y_pred),
+        }
+
+        return score_dict
+
+def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor):
+
+    score_dict = {
+            'auprc_macro': [],
+            'auprc_weighted': [],
+            'auroc_macro': [],
+            'auroc_weighted': [],
+            'brier_macro': [],
+            'brier_weighted': [],
+            'balanced_accuracy_macro': [],
+            'balanced_accuracy_weighted': [],
+            'f1_micro': [],
+            'hamming': [],
+            'subset_accuracy': [],
+    }
+
+    scores = [compute_atomic(fitted_estimator, X_test, Y_test, i) for i in range(boot_iter)]
+
+    # Aggregate scores
+    for k,_ in score_dict.items():
+        for dict in scores:
+            score_dict[k].append(dict[k])
+
+    print(f"Mean scores for {descriptor} with SE and 95% confidence intervals:\n")
+
+    for k,v in score_dict.items():
+        print(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+########## Binary scoring ###########
+        
+def compute_univariate_scores(X_train, X_test, Y_train, Y_test, area, measure_list, metric, boot_iter):
+    measure_dicts = []
+
+    for m in measure_list:
+        
+        m_dict = {}
+        F_train = load_feature_subset(X_train, area, [m], -1)
+        F_test = load_feature_subset(X_test, area, [m], -1)
+        
+        for y in Y_train:
+            scores = []
+            
+            for roi in F_train:
+                if metric == 'r2':
+                    model = LinearRegression(n_jobs=-1).fit(F_train[roi].to_numpy().reshape(-1,1), Y_train[y])
+                elif metric == 'auroc':
+                    model = LogisticRegression(max_iter=10000, n_jobs=-1).fit(F_train[roi].to_numpy().reshape(-1,1), Y_train[y])
+                
+                score = []             
+                for i in range(boot_iter):
+                    X_test_resampled, y_test_resampled = resample(F_test[roi], Y_test[y], replace=True, n_samples=len(F_test), random_state=0+i)
+
+                    if metric == 'r2':
+                        y_pred = model.predict(X_test_resampled.to_numpy().reshape(-1,1))
+                        score.append(r2_score(y_test_resampled, y_pred))
+                    elif metric == 'auroc':
+                        y_prob = model.predict_proba(X_test_resampled.to_numpy().reshape(-1,1))[:,1]
+                        score.append(roc_auc_score(y_test_resampled, y_prob))
+
+                scores.append(np.mean(score))
+                
+            m_dict[y] = scores
+        measure_dicts.append(m_dict)
+    
+    return measure_dicts
+
+def compute_univariate_scores_global(X_train, X_test, Y_train, Y_test, measure_list, metric, boot_iter):
+
+    score_dict = {}
+
+    for y in Y_train:
+        
+        scores = [] 
+
+        for m in measure_list:
+            f_train = load_feature_subset(X_train, 'global', [m])
+            f_test = load_feature_subset(X_test, 'global', [m])
+            
+            if metric == 'r2':
+                model = LinearRegression(n_jobs=-1).fit(f_train.to_numpy().reshape(-1,1), Y_train[y])
+            elif metric == 'auroc':
+                model = LogisticRegression(max_iter=10000, n_jobs=-1).fit(f_train.to_numpy().reshape(-1,1), Y_train[y])    
+
+            score = []
+            for i in range(100):
+                X_test_resampled, y_test_resampled = resample(f_test, Y_test[y], replace=True, n_samples=len(f_test), random_state=0+i)
+                
+                if metric == 'r2':
+                    y_pred = model.predict(X_test_resampled.to_numpy().reshape(-1,1))
+                    score.append(r2_score(y_test_resampled, y_pred))
+                elif metric == 'auroc':
+                    y_prob = model.predict_proba(X_test_resampled.to_numpy().reshape(-1,1))[:,1]
+                    score.append(roc_auc_score(y_test_resampled, y_prob))
+                else:
+                    pass 
+                
+            scores.append(np.mean(score))
+
+        score_dict[y] = scores
+    
+    return score_dict
+
+def compute_univariate_auroc_scores(X_train, X_test, Y_train, Y_test, boot_iter):
+
+    score_dict = {}
+
+    for x in X_train:
+        
+        scores = [] 
+        for y in Y_train:           
+            model = LogisticRegression(max_iter=10000, n_jobs=-1).fit(X_train[x].to_numpy().reshape(-1,1), Y_train[y])    
+
+            score = []
+            for i in range(100):
+                X_test_resampled, y_test_resampled = resample(X_test[x], Y_test[y], replace=True, n_samples=len(Y_test), random_state=0+i)
+                y_prob = model.predict_proba(X_test_resampled.to_numpy().reshape(-1,1))[:,1]
+                score.append(roc_auc_score(y_test_resampled, y_prob))
+
+            scores.append(np.mean(score))
+
+        score_dict[x] = scores
+    
+    return score_dict
