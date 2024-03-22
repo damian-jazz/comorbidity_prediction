@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss, balanced_accuracy_score, accuracy_score, r2_score
 from sklearn.utils import resample
+from sklearn.decomposition import PCA
 
 data_path = 'data/'
 
@@ -252,8 +253,8 @@ def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
         ir_dict[k] = (max_value / v)
 
     stats = pd.DataFrame({
-    'Absolute frequency': df.mean(),
-    'Relative frequency': df.sum(),
+    'Absolute frequency': df.sum(),
+    'Relative frequency': df.mean(),
     'Imbalance ratio': ir_dict.values(),
     })
 
@@ -263,7 +264,104 @@ def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
         return stats
     else:
         return stats, mean_ratio
+
+def pca_transform(df: pd.DataFrame, n_components=10, stats=False):
+    """
+    Returns pd.Dataframe that contains input data projected on PCA components
+    """
+    pca = PCA(n_components=n_components)
+    pca = pca.fit(df)
+    df_transformed = pd.DataFrame(pca.transform(df))
     
+    if stats == False:
+        return df_transformed
+    else:
+        df_transformed, pca.explained_variance_ratio_
+
+
+########## Resampling ###########
+
+def generate_oversampled_set(X: pd.DataFrame, Y: pd.DataFrame):
+    """
+    Returns two pd.Dataframe objects with additional datapoints
+    """
+    label_stats = generate_label_stats(Y)
+    X_over, Y_over = X.copy(), Y.copy()
+    
+    for i, col in enumerate(Y):
+        if col != 'Attention_Deficit_HyperactivityDisorder':
+            if col != 'AnxietyDisorders':
+                #print(int((label_stats.iloc[i,2]*label_stats.iloc[i,0])-label_stats.iloc[i,0]), col)
+                #print(X[Y[col]==1].shape, Y[Y[col]==1].shape)
+
+                X_select, Y_select = X[Y[col]==1], Y[Y[col]==1]
+                X_select, Y_select = X_select[Y_select.iloc[:,2]==0], Y_select[Y_select.iloc[:,2]==0] # exclude ADHD
+                X_select, Y_select = X_select[Y_select.iloc[:,-1]==0], Y_select[Y_select.iloc[:,-1]==0] # exclude Anxiety
+                
+                X_, Y_ = resample(X_select, Y_select, replace=True, n_samples=int((label_stats.iloc[i,2]*label_stats.iloc[i,0])-label_stats.iloc[i,0]), random_state=0)
+                X_over = pd.concat([X_over, X_], axis=0)
+                Y_over = pd.concat([Y_over, Y_], axis=0)
+            else:
+                X_select, Y_select = X[Y[col]==1], Y[Y[col]==1]
+                
+                X_, Y_ = resample(X_select, Y_select, replace=True, n_samples=int((label_stats.iloc[i,2]*label_stats.iloc[i,0])), random_state=0)
+                X_over = pd.concat([X_over, X_], axis=0)
+                Y_over = pd.concat([Y_over, Y_], axis=0)
+        else:
+            X_select, Y_select = X[Y[col]==1], Y[Y[col]==1]
+            X_, Y_ = resample(X_select, Y_select, replace=True, n_samples=int((label_stats.iloc[i,2]*label_stats.iloc[i,0])), random_state=0)
+            X_over = pd.concat([X_over, X_], axis=0)
+            Y_over = pd.concat([Y_over, Y_], axis=0)
+    
+    return X_over, Y_over
+
+def generate_undersampled_set(X: pd.DataFrame, Y: pd.DataFrame):
+    """
+    Returns two pd.Dataframe objects with additional datapoints
+    """
+    X_under, Y_under = X.copy(), Y.copy()
+    
+    # 1. Exclude all ADHD & Anxiety comorbidities
+    Y_select = Y[Y.iloc[:,2]==1]
+    Y_select = Y_select[Y_select.iloc[:,-1]==1]
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 2. Exclude 4/5 of all ADHD-only samples
+    Y_select = Y_under[(Y_under['Attention_Deficit_HyperactivityDisorder'] == 1) & (Y_under.loc[:, Y.columns != 'Attention_Deficit_HyperactivityDisorder'].sum(axis=1) == 0)]
+    Y_select = Y_select.sample(frac=9/10, random_state=1)
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 3. Exclude all ADHD and specific learning disorder samples
+    Y_select = Y_under[Y_under.iloc[:,2]==1]
+    Y_select = Y_select[Y_select.iloc[:,7]==1]
+    
+    labels_to_exclude = list(Y.columns)
+    labels_to_exclude.remove('Attention_Deficit_HyperactivityDisorder')
+    labels_to_exclude.remove('SpecificLearningDisorder')
+    for l in labels_to_exclude:
+        Y_select = Y_select[Y_select[l] == 0]
+        return X_under, Y_under
+    
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    # 4. Exclude all ADHD and disruptive disorder samples
+    Y_select = Y_under[Y_under.iloc[:,2]==1]
+    Y_select = Y_select[Y_select.iloc[:,9]==1]
+
+    labels_to_exclude = list(Y.columns)
+    labels_to_exclude.remove('Attention_Deficit_HyperactivityDisorder')
+    labels_to_exclude.remove('Disruptive')
+    for l in labels_to_exclude:
+        Y_select = Y_select[Y_select[l] == 0]
+    
+    Y_under = Y_under.drop(Y_select.index, errors='ignore')
+    X_under = X_under.drop(Y_select.index, errors='ignore')
+
+    return X_under, Y_under
+
 ########## Multi-label scoring ###########
     
 def compute_atomic(estimator, X_test, Y_test, iteration):
@@ -314,7 +412,7 @@ def compute_atomic_chain(estimator, X_test, Y_test, iteration):
 
         Y_prob = estimator.predict_proba(X_test_resampled)
         Y_pred = estimator.predict(X_test_resampled)
-    
+
         # Compute brier score
         brier_w = 0
         acc_w = 0
@@ -346,7 +444,7 @@ def compute_atomic_chain(estimator, X_test, Y_test, iteration):
         return score_dict
 
 
-def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor, chain=False):
+def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, chain=False):
 
     score_dict = {
             'auprc_macro': [],
@@ -372,12 +470,12 @@ def compute_scores(fitted_estimator, X_test, Y_test, boot_iter, descriptor, chai
         for dict in scores:
             score_dict[k].append(dict[k])
 
-    print(f"Mean scores for {descriptor} with SE and 95% confidence intervals:\n")
+    print(f"Mean scores with SE and 95% confidence intervals:\n")
 
     for k,v in score_dict.items():
         print(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
 
-########## Binary scoring ###########
+########## Univariate scoring ###########
         
 def compute_univariate_scores(X_train, X_test, Y_train, Y_test, area, measure_list, metric, boot_iter):
     measure_dicts = []
