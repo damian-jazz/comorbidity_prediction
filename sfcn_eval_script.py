@@ -3,17 +3,12 @@ import os
 import argparse
 import logging
 
-import pandas as pd
-import numpy as np
-
-from utils.utils import load_data
-from utils.sfcn_utils import datasetT1
-from utils.sfcn_train import eval
+from utils.utils import load_data, generate_undersampled_set, generate_oversampled_set
+from utils.sfcn_utils import DatasetBrainImages
+from utils.sfcn_train import compute_scores
 from utils.sfcn_model import SFCN
 
 from sklearn.model_selection import train_test_split
-from sklearn.utils import resample
-from sklearn.metrics import average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss
 
 import torch
 from torch.utils.data import DataLoader
@@ -26,7 +21,9 @@ parser.add_argument("-device_index", type=int, default=0)
 parser.add_argument("-run", type=int, default=1)
 parser.add_argument("-epoch", type=int, default=5)
 parser.add_argument("-modality", type=str, default="T1w")
-parser.add_argument("-loss", type=str, default="bce") 
+parser.add_argument("-loss", type=str, default="bce")
+parser.add_argument("-sampling", type=str, default="none")
+parser.add_argument("-boot_iter", type=int, default=1)
 parser.add_argument("-source_path", type=str, default="/t1images/")
 
 # Parse the arguments
@@ -37,6 +34,8 @@ run = args.run # run required for checkpoint loading
 epoch = args.epoch # epoch required for checkpoint loading
 modality = args.modality
 loss = args.loss # loss required for checkpoint loading
+sampling = args.sampling
+boot_iter = args.boot_iter
 source_path = args.source_path
 
 # Set up paths
@@ -48,7 +47,7 @@ checkpoints_path = base_path + "checkpoints/"
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_loss_{loss}.log',
+                    filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}.log',
                     filemode='w')
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
@@ -65,6 +64,8 @@ logging.info(f"run: {run}")
 logging.info(f"epoch: {epoch}")
 logging.info(f"modality: {modality}")
 logging.info(f"loss: {loss}")
+logging.info(f"sampling: {sampling}")
+logging.info(f"boot_iter: {boot_iter}")
 
 # Device
 device = "cuda:" + str(device_index)
@@ -72,10 +73,21 @@ logging.info(f"device: {device}")
 
 # Load and split data
 X, _, Y = load_data('classification_t1')
-_, X_test, _, Y_test = train_test_split(X.iloc[:,0], Y.iloc[:,1:], test_size=0.25, random_state=0)
+X, Y = X.iloc[:,0], Y.iloc[:,1:]
+
+if sampling == "none":
+    _, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
+elif sampling == "under":
+    X_under, Y_under = generate_undersampled_set(X, Y)
+    _, X_test, _, Y_test = train_test_split(X_under, Y_under, test_size=0.25, random_state=0)
+elif sampling == "over":
+    X_over, Y_over = generate_oversampled_set(X, Y)
+    _, X_test, _, Y_test = train_test_split(X_over, Y_over, test_size=0.25, random_state=0)
+else:
+    pass
 
 # Create dataset
-test_data = datasetT1(X_test, Y_test, modality=modality, source_path=source_path)
+test_data = DatasetBrainImages(X_test, Y_test, modality=modality, source_path=source_path)
 
 # Set batch size
 batch_size = 8
@@ -84,38 +96,7 @@ logging.info(f"batch size: {batch_size}")
 # Instantiate model and load params from checkpoint
 model = SFCN(output_dim=13)
 model.to(device)
-model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_epoch_{epoch}.pth"))
+model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_{sampling}_epoch_{epoch}.pth"))
 
-# Evaluation
-auprc = []
-auroc = []
-brier = []
-hamm = []
-f1 = []
-
-for i in range(2):
-    X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
-
-    eval_data = datasetT1(X_test_resampled, y_test_resampled, modality=modality, source_path=source_path)
-    eval_dataloader = DataLoader(eval_data, batch_size=batch_size, shuffle=False)
-    y_prob, y_pred  = eval(eval_dataloader, device, model)
-
-    # Compute brier score
-    brier_scores = np.zeros(y_prob.shape[1])
-    for j in range(y_prob.shape[1]):
-        brier_scores[j] = brier_score_loss(y_test_resampled.iloc[:,j], y_prob[:,j])
-    brier.append(brier_scores.mean())
-    
-    # Other metrics
-    auprc.append(average_precision_score(y_test_resampled, y_prob, average='macro'))
-    auroc.append(roc_auc_score(y_test_resampled, y_prob, average='macro'))
-    f1.append(f1_score(y_test_resampled, y_pred, average='micro'))
-    hamm.append(hamming_loss(y_test_resampled, y_pred))
-    logging.info(f"Bootstrapping iteration {i}")
-
-logging.info(f"Mean scores for 3D-CNN with 95% confidence intervals:")
-logging.info("AUPRC macro: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(auprc), np.percentile(auprc, 2.5), np.percentile(auprc, 97.5)))
-logging.info("AUROC macro: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(auroc), np.percentile(auroc, 2.5), np.percentile(auroc, 97.5)))
-logging.info("Brier score: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(brier), np.percentile(brier, 2.5), np.percentile(brier, 97.5)))
-logging.info("Hamming loss: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(hamm), np.percentile(hamm, 2.5), np.percentile(hamm, 97.5)))
-logging.info("Micro Avg F1 score: {:.2f} [{:.2f}, {:.2f}]".format(np.mean(f1), np.percentile(f1, 2.5), np.percentile(f1, 97.5)))
+# Compute scores
+compute_scores(X_test, Y_test, device, model, batch_size, logging, boot_iter)

@@ -1,17 +1,24 @@
+import numpy as np
 import torch
 from torch.nn import functional as F
+from torch.utils.data import DataLoader
+from utils.sfcn_utils import DatasetBrainImages
+from sklearn.utils import resample
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss, balanced_accuracy_score, accuracy_score
 
 ##### bce loss #####
 
 def train(dataloader, device, model, loss_fn, optimizer, logging, period=20):
     size = len(dataloader.dataset)
     model.train()
+    train_loss = 0
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
 
         # Compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
+        train_loss += loss
         
         # Backpropagation
         loss.backward()
@@ -22,7 +29,8 @@ def train(dataloader, device, model, loss_fn, optimizer, logging, period=20):
             loss, current = loss.item(), (batch + 1) * len(X)
             logging.info(f"\tTrain loss: {loss:.4f}  [{current:>5d}/{size:>5d}]") 
     
-    logging.info(f"\tTrain loss: {loss:.4f}") 
+    train_loss /= len(dataloader)
+    logging.info(f"\tTotal train loss: {train_loss:.4f}") 
 
 def test(dataloader, device, model, loss_fn, logging):
     size = len(dataloader.dataset)
@@ -98,12 +106,14 @@ def sigmoid_focal_loss(
 def train_focal(dataloader, device, model, optimizer, logging, period=20):
     size = len(dataloader.dataset)
     model.train()
+    train_loss = 0
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
 
         # Compute prediction error
         pred = model(X)
         loss = sigmoid_focal_loss(pred, y)
+        train_loss += loss
         
         # Backpropagation
         loss.backward()
@@ -113,8 +123,9 @@ def train_focal(dataloader, device, model, optimizer, logging, period=20):
         if (batch % period == 0):
             loss, current = loss.item(), (batch + 1) * len(X)
             logging.info(f"\tTrain loss: {loss:.4f}  [{current:>5d}/{size:>5d}]") 
-
-    logging.info(f"\tTrain loss: {loss:.4f}") 
+    
+    train_loss /= len(dataloader)
+    logging.info(f"\tTotal train loss: {loss:.4f}") 
 
 def test_focal(dataloader, device, model, logging):
     size = len(dataloader.dataset)
@@ -166,3 +177,73 @@ def eval(dataloader, device, model):
                 y_pred = torch.cat((y_pred, pred), 0)
 
     return y_prob, y_pred
+
+def compute_atomic(X_test, Y_test, device, model, batch_size, iteration):
+        
+        X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+iteration)
+        
+        eval_set = DatasetBrainImages(X_test_resampled, y_test_resampled)
+        eval_loader = DataLoader(eval_set, batch_size=batch_size, shuffle=False)
+        Y_prob, Y_pred  = eval(eval_loader, device, model)
+        
+        # Compute brier score
+        brier_w = 0
+        acc_w = 0
+        brier_scores = np.zeros(Y_test.shape[1])
+        acc_scores = np.zeros(Y_test.shape[1])
+
+        for i in range(Y_test.shape[1]):    
+            brier_scores[i] = brier_score_loss(y_test_resampled.iloc[:,i], Y_prob[:, i])
+            acc_scores[i] = balanced_accuracy_score(y_test_resampled.iloc[:,i], Y_pred[:, i])
+            
+            brier_w += brier_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+            acc_w += acc_scores[i] * (Y_test.iloc[:,i].sum() / Y_test.shape[0])
+
+        # Store results
+        score_dict = {
+               'auprc_macro': average_precision_score(y_test_resampled, Y_prob, average='macro'),
+               'auprc_weighted': average_precision_score(y_test_resampled, Y_prob, average='weighted'),
+               'auroc_macro': roc_auc_score(y_test_resampled, Y_prob, average='macro'),
+               'auroc_weighted': roc_auc_score(y_test_resampled, Y_prob, average='weighted'),
+               'brier_macro': brier_scores.mean(),
+               'brier_weighted': brier_w / Y_test.shape[1],
+               'balanced_accuracy_macro': acc_scores.mean(),
+               'balanced_accuracy_weighted': acc_w / Y_test.shape[1],
+               'f1_micro': f1_score(y_test_resampled, Y_pred, average='micro'),
+               'hamming': hamming_loss(y_test_resampled, Y_pred),
+               'subset_accuracy': accuracy_score(y_test_resampled, Y_pred),
+        }
+
+        return score_dict
+  
+def compute_scores(X_test, Y_test, device, model, batch_size, logging, boot_iter):
+
+    score_dict = {
+            'auprc_macro': [],
+            'auprc_weighted': [],
+            'auroc_macro': [],
+            'auroc_weighted': [],
+            'brier_macro': [],
+            'brier_weighted': [],
+            'balanced_accuracy_macro': [],
+            'balanced_accuracy_weighted': [],
+            'f1_micro': [],
+            'hamming': [],
+            'subset_accuracy': [],
+    }
+    
+    scores = []
+    for i in range(boot_iter):
+        logging.info(f"Bootstrapping iteration {i}")
+        scores.append(compute_atomic(X_test, Y_test, device, model, batch_size, i))
+
+    # Aggregate scores
+    for k,_ in score_dict.items():
+        for dict in scores:
+            score_dict[k].append(dict[k])
+
+    logging.info(f"Mean scores with SE and 95% confidence intervals:\n")
+
+    for k,v in score_dict.items():
+        logging.info(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+    

@@ -35,7 +35,7 @@ def crop_center(data, out_sp):
         raise ('Wrong dimension! dim=%d.' % nd)
     return data_crop
 
-class datasetT1(Dataset):
+class DatasetBrainImages(Dataset):
     def __init__(self, ids, labels, modality, source_path, out_shape=(200, 240, 200)):
         self.ids = ids
         self.labels = labels
