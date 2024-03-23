@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
-class datasetMF(Dataset):
+class DatasetBrainMeasures(Dataset):
     def __init__(self, data, labels):
         self.data = data
         self.labels = labels
