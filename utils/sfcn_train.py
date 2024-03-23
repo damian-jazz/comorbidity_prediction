@@ -30,7 +30,7 @@ def train(dataloader, device, model, loss_fn, optimizer, logging, period=20):
             logging.info(f"\tTrain loss: {loss:.4f}  [{current:>5d}/{size:>5d}]") 
     
     train_loss /= len(dataloader)
-    logging.info(f"\tTotal train loss: {train_loss:.4f}") 
+    logging.info(f"\tAverage loss: {train_loss:.4f}") 
 
 def test(dataloader, device, model, loss_fn, logging):
     size = len(dataloader.dataset)
@@ -125,7 +125,7 @@ def train_focal(dataloader, device, model, optimizer, logging, period=20):
             logging.info(f"\tTrain loss: {loss:.4f}  [{current:>5d}/{size:>5d}]") 
     
     train_loss /= len(dataloader)
-    logging.info(f"\tTotal train loss: {loss:.4f}") 
+    logging.info(f"\tAverage loss: {loss:.4f}") 
 
 def test_focal(dataloader, device, model, logging):
     size = len(dataloader.dataset)
