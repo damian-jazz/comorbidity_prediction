@@ -2,14 +2,16 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib import cm
 import seaborn as sns
-from utils.utils import generate_undersampled_set, generate_oversampled_set, generate_label_stats
-from sklearn.model_selection import train_test_split
-from umap import UMAP
+from sklearn.metrics import PrecisionRecallDisplay, RocCurveDisplay
 
 plot_path = 'plots/'
 
 ########## Settings ###########
+
+# Color management
 
 color_palette = [
     "lightseagreen",
@@ -19,6 +21,20 @@ color_palette = [
     "hotpink",
     "seagreen"
 ]
+
+#n_colors = 6
+#discrete_cmap = cm.get_cmap('viridis', n_colors)
+#color_palette = discrete_cmap(np.arange(n_colors))
+
+# Convert CSS color strings to RGBA tuples
+#css_colors = ["steelblue", "powderblue"]
+#rgba_tuples = [mcolors.to_rgb(color) + (1,) for color in css_colors]
+
+# Create custom colormap from RGBA tuples
+#cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', rgba_tuples)
+
+cmap = sns.color_palette("ch:start=.2,rot=-.3_r", as_cmap=True)
+#cmap = 'viridis'
 
 diagnosis_acronyms = ['TSD', 'DD', 'ADHD', 'MD', 'ASD', 'CD', 'OD', 'SLD', 'OCD', 'D', 'ID', 'ED', 'AD', 'NC']
 
@@ -91,10 +107,16 @@ def plot_diagnosis_prevalence(df: pd.DataFrame, tag: str):
     ax1.set(xlabel=None)
     #plt.title("Diagnosis distribution for sex and site")
     
-    offset = 4-df['Site'].nunique()
+    case = 4 - df['Site'].nunique()
     
     plt.subplot(2,1,2)
-    ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", palette=color_palette[2+offset:], multiple='dodge', shrink=0.8, linewidth=0)
+    if case == 0:
+        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", palette=color_palette[2:], multiple='dodge', shrink=0.8, linewidth=0)
+    elif case == 1:
+        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", palette=color_palette[2:-1], multiple='dodge', shrink=0.8, linewidth=0)
+    else:
+        pass
+
     #ax2.grid(which='both', color='gray', alpha=0.05)
     #ax2.set_xticks(range(14), data['Diagnosis'].unique().tolist(), rotation=90)
     ax2.set_xticks(range(14), diagnosis_acronyms)
@@ -147,87 +169,6 @@ def plot_diagnosis_methods(df: pd.DataFrame, tag: str):
 
     fig.savefig(plot_path + f'diagnosis_characterization_{tag}.svg', bbox_inches='tight')
 
-########## UMAP ###########
-
-def plot_umap(df: pd.DataFrame, tag: str):
-    umap = UMAP()
-    ebd = umap.fit_transform(df)
-    
-    fig = plt.figure(1,(5,4))
-    plt.scatter(ebd[:,0], ebd[:,1], s=2, color='lightgrey')
-    plt.title('Scatter plot in embedding space')
-    plt.xticks([], [])
-    plt.yticks([], [])
-    plt.tight_layout()
-
-    fig.savefig(plot_path + f'umap_{tag}.svg', bbox_inches='tight')   
-
-def plot_umap_combined(X: pd.DataFrame, Y: pd.DataFrame, tag: str):
-    # Create new sets for oversampling and undersampling
-    X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.25, random_state=0)
-    
-    # regular
-    _, mean_ir_regular = generate_label_stats(Y, mean_ir=True)
-
-    # under
-    _, Y_under = generate_undersampled_set(X_train, Y_train)
-    _, mean_ir_under = generate_label_stats(Y_under, True)
-    
-    # over
-    _, Y_over = generate_oversampled_set(X_train, Y_train)
-    _, mean_ir_over = generate_label_stats(Y_over, True)
-
-    # Fit umap
-    umap = UMAP()
-    ebd_1 = umap.fit_transform(Y)
-    ebd_2 = umap.fit_transform(Y_under)
-    ebd_3 = umap.fit_transform(Y_over)
-
-    # Plot
-    fig = plt.figure(1,(11,4))
-
-    plt.subplot(1, 3, 1)
-    ax1 = sns.scatterplot(x=ebd_1[:,0], y=ebd_1[:,1], s=2, color=color_palette[3])
-    ax1.set_xticks([], [])
-    ax1.set_yticks([], [])
-    plt.title(f"Regular (n={Y.shape[0]}, mean-ir={mean_ir_regular:.1f})")
-
-    plt.subplot(1, 3, 2)
-    ax2 = sns.scatterplot(x=ebd_2[:,0], y=ebd_2[:,1], s=2, color=color_palette[3])
-    ax2.set_xticks([], [])
-    ax2.set_yticks([], [])
-    plt.title(f"Undersampled (n={Y_under.shape[0]}, mean-ir={mean_ir_under:.1f})")
-
-    plt.subplot(1, 3, 3)
-    ax3 = sns.scatterplot(x=ebd_3[:,0], y=ebd_3[:,1], s=2, color=color_palette[3])
-    ax3.set_xticks([], [])
-    ax3.set_yticks([], [])
-    plt.title(f"Oversampled (n={Y_over.shape[0]}, mean-ir={mean_ir_over:.1f})")
-    
-    plt.suptitle(f"Scatter plots for diagnoses in embedding space")
-    #plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
-    
-    plt.tight_layout()
-    fig.savefig(plot_path + f'umap_combined_{tag}.svg', bbox_inches='tight')   
-
-
-def plot_umap_cluster(df: pd.DataFrame, tag: str):
-    umap = UMAP()
-    ebd = umap.fit_transform(df)
-    
-    fig = plt.figure(1,(15,14))
-    for k in range(df.shape[1]):
-        plt.subplot(4, 4, k+1)
-        selec = df[df.columns[k]] != 0
-        plt.scatter(ebd[~selec,0], ebd[~selec,1], s=2, c='lightgray', alpha=.1)
-        plt.scatter(ebd[selec,0], ebd[selec,1], s=2, c=color_palette[3], alpha=.6)
-        plt.title(df.columns[k], fontsize=8)
-        plt.xticks([])
-        plt.yticks([])
-    plt.tight_layout()
-
-    fig.savefig(plot_path + f'umap_multi_cluster_{tag}.svg', bbox_inches='tight')
-
 ########## Morphometric features ###########
     
 def plot_feature_confounder_relation(df: pd.DataFrame, f: str, c:str, c2:str, h_list: list[str]):
@@ -246,3 +187,188 @@ def plot_feature_confounder_relation(df: pd.DataFrame, f: str, c:str, c2:str, h_
 
     plt.suptitle(f"Relationship between {f} and {c}")
     fig.savefig(plot_path + f'relationship_{f}_{c}_with_{c2}.svg', bbox_inches='tight')
+
+########## Statistical analysis ###########
+
+def plot_global_scores(df: pd.DataFrame, metric: str):
+    if metric == 'r2':   
+        plt.figure(1,(6,2))
+        sns.heatmap(df, cmap=cmap, fmt=".2f", vmin=df.min(axis=None), vmax=df.max(axis=None))
+        plt.title(r"Mean $R^2$ scores for global features explaining confounders" + "\n")
+        plt.savefig(plot_path + 'r2_features_confounder_global.svg', bbox_inches='tight')
+    if metric == 'auroc':
+        sns.heatmap(df, cmap=cmap, fmt=".2f", vmin=df.min(axis=None), vmax=df.max(axis=None))
+        plt.title(r"Mean AUROC scores for global features explaining diagnoses" + "\n")
+        plt.savefig(plot_path + 'auroc_features_diagnoses_global.svg', bbox_inches='tight')
+
+def plot_subcortical_scores(score_dicts: dict, metric: str, measure_list, labels):
+    
+    global_vmin = +np.inf
+    global_vmax = -np.inf
+
+    for index in range(len(measure_list)):
+        df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+        if df.min(axis=None) < global_vmin:
+            global_vmin = df.min(axis=None)
+        if df.max(axis=None) > global_vmax:
+            global_vmax = df.max(axis=None)
+
+    if metric == 'r2':   
+        plt.figure(1,(9,14))
+        
+        for index in range(len(measure_list)):
+            df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+            
+            plt.subplot(7,1,index+1)
+            ax = sns.heatmap(df, cmap=cmap, vmin=global_vmin, vmax=global_vmax, fmt=".2f")
+            
+            if index == len(measure_list)-1:
+                ax.set_xticks(range(len(labels)), labels)
+            else:
+                ax.set_xticks([], [])
+                ax.set(xlabel=None)
+            
+            plt.title(f"{measure_list[index]}")
+
+        plt.suptitle(r"Mean $R^2$ scores for roi-based subcortical features (aseg) explaining confounders" + "\n")
+        plt.tight_layout()
+        plt.savefig(f'{plot_path}r2_features_confounder_aseg.svg', bbox_inches='tight')
+    
+    if metric == 'auroc':
+        plt.figure(1,(12,20))
+
+        for index in range(len(measure_list)):
+            df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+            
+            plt.subplot(7,1,index+1)
+            ax = sns.heatmap(df, cmap=cmap, yticklabels=df.index, vmin=global_vmin, vmax=global_vmax, fmt=".2f")
+            
+            if index == len(measure_list)-1:
+                ax.set_xticks(range(len(labels)), labels)
+            else:
+                ax.set_xticks([], [])
+                ax.set(xlabel=None)
+            
+            plt.title(f"{measure_list[index]}")
+
+        plt.suptitle(r"Mean AUROC scores for roi-based subcortical features (aseg) explaining diagnoses" + "\n")
+        plt.tight_layout()
+        plt.savefig(f'{plot_path}auroc_features_diagnoses_aseg.svg', bbox_inches='tight')
+    
+def plot_cortical_scores(score_dicts: dict, metric: str, measure_list, labels, h_tag: str):
+    
+    global_vmin = +np.inf
+    global_vmax = -np.inf
+
+    for index in range(len(measure_list)):
+        df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+        if df.min(axis=None) < global_vmin:
+            global_vmin = df.min(axis=None)
+        if df.max(axis=None) > global_vmax:
+            global_vmax = df.max(axis=None)
+
+    if metric == 'r2':   
+        plt.figure(1,(9,18))
+        
+        for index in range(len(measure_list)):
+            df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+            
+            plt.subplot(9,1,index+1)
+            ax = sns.heatmap(df, cmap=cmap, vmin=-0.015, vmax=0.008, fmt=".2f")
+            
+            if index == len(measure_list)-1:
+                ax.set_xticks(range(len(labels)), labels)
+            else:
+                ax.set_xticks([], [])
+                ax.set(xlabel=None)
+            
+            plt.title(f"{measure_list[index]}")
+
+        plt.suptitle(r"Mean $R^2$ " + f"scores for roi-based cortical features (aparc {h_tag}) explaining confounders" + "\n")
+        plt.tight_layout()
+        plt.savefig(f'{plot_path}r2_features_confounder_aparc_{h_tag}.svg', bbox_inches='tight')
+    
+    if metric == 'auroc':
+        plt.figure(1,(10,23))
+
+        for index in range(len(measure_list)):
+            df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
+            
+            plt.subplot(9,1,index+1)
+            ax = sns.heatmap(df, cmap=cmap, yticklabels=df.index, vmin=global_vmin, vmax=global_vmax, fmt=".2f")
+            
+            if index == len(measure_list)-1:
+                ax.set_xticks(range(len(labels)), labels)
+            else:
+                ax.set_xticks([], [])
+                ax.set(xlabel=None)
+            
+            plt.title(f"{measure_list[index]}")
+
+        plt.suptitle(f"Mean AUROC scores for roi-based cortical features (aparc {h_tag}) explaining diagnoses" + "\n")
+        plt.tight_layout()
+        plt.savefig(f'{plot_path}auroc_features_diagnoses_aparc_{h_tag}.svg', bbox_inches='tight')
+
+def plot_confounder_diagnoses_scores(df: pd.DataFrame):
+    plt.figure(1,(5,2))
+    sns.heatmap(df, cmap=cmap)
+    plt.title(r"AUROC scores for confounders explaining diagnoses" + "\n")
+    plt.savefig(plot_path + 'auroc_confounder_diagnoses_global.svg', bbox_inches='tight')
+
+########## PR and ROC curves ###########
+    
+def plot_pr_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: dict, hgb_estimators:dict, tag: str):
+    fig, axs = plt.subplots(4,4, figsize=(20, 20))
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5)
+
+    counter = 0
+    for i in range(0,4,1):
+        for j in range(0,4,1):
+            if (i > 2 & j > 0) or (counter > 12):
+                fig.delaxes(axs[i,j])
+            else:
+                label = Y_test.columns[counter]
+                counter += 1
+                
+                y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
+                y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
+                
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j], color=color_palette[0])
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j], color=color_palette[1])
+                
+                axs[i,j].set_title(f"{label}")
+                axs[i,j].legend(loc="best")
+                axs[i,j].set_xlabel("Recall", size=12)
+                axs[i,j].set_ylabel("Precision", size=12)
+                axs[i,j].set_xmargin(0.01)
+                axs[i,j].set_ymargin(0.01)
+    
+    fig.savefig(plot_path + f'pr_curves_{tag}.svg', bbox_inches='tight')
+
+def plot_roc_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: dict, hgb_estimators:dict, tag: str):
+    fig, axs = plt.subplots(4,4, figsize=(20, 20))
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5)
+
+    counter = 0
+    for i in range(0,4,1):
+        for j in range(0,4,1):
+            if (i > 2 & j > 0) or (counter > 12):
+                fig.delaxes(axs[i,j])
+            else:
+                label = Y_test.columns[counter]
+                counter += 1
+                
+                y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
+                y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
+                
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j], color=color_palette[0])
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j], color=color_palette[1])
+                
+                axs[i,j].set_title(f"{label}")
+                axs[i,j].legend(loc="best")
+                axs[i,j].set_xlabel("False positive rate", size=12)
+                axs[i,j].set_ylabel("True positive rate", size=12)
+                axs[i,j].set_xmargin(0.01)
+                axs[i,j].set_ymargin(0.01)
+    
+    fig.savefig(plot_path + f'roc_curves_{tag}.svg', bbox_inches='tight')
