@@ -69,14 +69,12 @@ logging.info(f"device: {device}")
 # Load and split data
 X, _, Y = load_data("classification_t1")
 X, Y = X.iloc[:,0], Y.iloc[:,1:]
-
-if sampling == "none":
-    X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.25, random_state=0)
-elif sampling == "under":
-    X_under, Y_under = generate_undersampled_set(X, Y)
-    X_train, _, Y_train, _ = train_test_split(X_under, Y_under, test_size=0.25, random_state=0)
+X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.25, random_state=0)
+    
+if sampling == "under":
+    X_under, Y_under = generate_undersampled_set(X_train, Y_train)
+    X_train, Y_train = X_under, Y_under
 elif sampling == "over":
-    X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.25, random_state=0)
     X_over, Y_over = generate_oversampled_set(X_train, Y_train)
     X_train, Y_train = X_over, Y_over
 else:

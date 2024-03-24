@@ -74,16 +74,7 @@ logging.info(f"device: {device}")
 # Load and split data
 X, _, Y = load_data('classification_t1')
 X, Y = X.iloc[:,0], Y.iloc[:,1:]
-
-if sampling == "none":
-    _, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
-elif sampling == "under":
-    X_under, Y_under = generate_undersampled_set(X, Y)
-    _, X_test, _, Y_test = train_test_split(X_under, Y_under, test_size=0.25, random_state=0)
-elif sampling == "over":
-    _, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
-else:
-    pass
+_, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
 
 # Create dataset
 test_data = DatasetBrainImages(X_test, Y_test, modality=modality, source_path=source_path)
