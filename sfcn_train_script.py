@@ -53,7 +53,7 @@ formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger().addHandler(console)
 
-# Log path variables
+# Log variables
 logging.info(f"base_path: {base_path}")
 logging.info(f"source_path: {source_path}")
 logging.info(f"logs_path: {logs_path}")
