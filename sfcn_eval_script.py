@@ -3,7 +3,7 @@ import os
 import argparse
 import logging
 
-from utils.utils import load_data, generate_undersampled_set, generate_oversampled_set
+from utils.utils import load_data, generate_undersampled_set
 from utils.sfcn_utils import DatasetBrainImages
 from utils.sfcn_train import compute_scores
 from utils.sfcn_model import SFCN
