@@ -81,8 +81,7 @@ elif sampling == "under":
     X_under, Y_under = generate_undersampled_set(X, Y)
     _, X_test, _, Y_test = train_test_split(X_under, Y_under, test_size=0.25, random_state=0)
 elif sampling == "over":
-    X_over, Y_over = generate_oversampled_set(X, Y)
-    _, X_test, _, Y_test = train_test_split(X_over, Y_over, test_size=0.25, random_state=0)
+    _, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
 else:
     pass
 
