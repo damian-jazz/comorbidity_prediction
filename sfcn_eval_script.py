@@ -114,6 +114,7 @@ else:
          auroc_scores[label] = []
 
     for i in range(boot_iter):
+        logging.info(f"Bootstrapping iteration {i}")
         X_test_resampled, Y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
 
         eval_set = DatasetBrainImages(X_test_resampled, Y_test_resampled, modality=modality, source_path=source_path)
