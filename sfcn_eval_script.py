@@ -29,7 +29,7 @@ parser.add_argument("-modality", type=str, default="T1w")
 parser.add_argument("-loss", type=str, default="bce")
 parser.add_argument("-sampling", type=str, default="none")
 parser.add_argument("-boot_iter", type=int, default=1)
-parser.add_argument("-eval_mode", type=bool, default="multi")
+parser.add_argument("-eval_mode", type=str, default="multi")
 parser.add_argument("-source_path", type=str, default="/t1images/")
 
 # Parse the arguments
