@@ -66,7 +66,7 @@ def plot_demographics(df: pd.DataFrame, tag: str):
     fig = plt.figure(1,(14,4))
 
     plt.subplot(1,3,1)
-    g1 = sns.histplot(data=df, x='Age', bins=40, color=color_palette[3])
+    g1 = sns.histplot(data=df, x='Age', bins=40, color=color_palette[3], edgecolor='white')
     g1.set(ylabel=None)
     g1.set_yticklabels([])
     g1.set_yticks([])
