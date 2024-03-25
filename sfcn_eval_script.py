@@ -51,18 +51,11 @@ logs_path = base_path + "logs/"
 checkpoints_path = base_path + "checkpoints/"
 
 # Configure logging settings
-if eval_mode == 'multi':
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}.log',
-                        filemode='w')
-elif eval_mode == 'binary':
-        logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}_binary.log',
-                        filemode='w')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)-8s %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}_{eval_mode}.log',
+                    filemode='w')
 
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
