@@ -572,7 +572,32 @@ def compute_scores_binary(fitted_estimators, X_test, Y_test, boot_iter):
     for k,v in score_dict.items():
         print(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
 
+def compute_auprc_auroc_scores(estimators, X_test, Y_test, boot_iter):
+    auprc_scores = {}
+    auroc_scores = {}
 
+    for label in Y_test.columns:
+        auprc_scores[label] = []
+        auroc_scores[label] = []
+
+    for i in range(boot_iter):
+        X_test_resampled, Y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
+
+        for i, label in enumerate(Y_test.columns):
+            y_prob = estimators[label].predict_proba(X_test_resampled)[:, 1].reshape(-1,1)
+
+            auprc_scores[label].append(average_precision_score(Y_test_resampled.iloc[:, i], y_prob))
+            auroc_scores[label].append(roc_auc_score(Y_test_resampled.iloc[:, i], y_prob))
+
+    print(f"Mean scores with SE and 95% confidence intervals:\n")
+    
+    print(f"AUPRC:")
+    for k,v in auprc_scores.items():
+        print(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+    print(f"\nAUROC:")
+    for k,v in auroc_scores.items():
+        print(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
 
 ########## Univariate scoring ###########
         
