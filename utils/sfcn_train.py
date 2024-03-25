@@ -242,7 +242,7 @@ def compute_scores(X_test, Y_test, device, model, modality, source_path, batch_s
         for dict in scores:
             score_dict[k].append(dict[k])
 
-    logging.info(f"Mean scores with SE and 95% confidence intervals:\n")
+    logging.info(f"Mean scores with SE and 95% confidence intervals:")
 
     for k,v in score_dict.items():
         logging.info(f"{(k + ':').ljust(30)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
