@@ -29,7 +29,7 @@ parser.add_argument("-modality", type=str, default="T1w")
 parser.add_argument("-loss", type=str, default="bce")
 parser.add_argument("-sampling", type=str, default="none")
 parser.add_argument("-boot_iter", type=int, default=1)
-parser.add_argument("-binary_eval", type=bool, default=False)
+parser.add_argument("-eval_mode", type=bool, default="multi")
 parser.add_argument("-source_path", type=str, default="/t1images/")
 
 # Parse the arguments
@@ -42,7 +42,7 @@ modality = args.modality
 loss = args.loss # loss required for checkpoint loading
 sampling = args.sampling
 boot_iter = args.boot_iter
-binary_eval = args.binary_eval
+eval_mode = args.eval_mode
 source_path = args.source_path
 
 # Set up paths
@@ -51,13 +51,13 @@ logs_path = base_path + "logs/"
 checkpoints_path = base_path + "checkpoints/"
 
 # Configure logging settings
-if binary_eval == False:
+if eval_mode == 'multi':
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}.log',
                         filemode='w')
-else:
+elif eval_mode == 'binary':
         logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
@@ -80,7 +80,7 @@ logging.info(f"epoch: {epoch}")
 logging.info(f"modality: {modality}")
 logging.info(f"loss: {loss}")
 logging.info(f"sampling: {sampling}")
-logging.info(f"binary_eval: {binary_eval}")
+logging.info(f"eval_mode: {eval_mode}")
 logging.info(f"boot_iter: {boot_iter}")
 
 # Device
@@ -102,10 +102,9 @@ model.to(device)
 model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_{sampling}_epoch_{epoch}.pth"))
 
 # Compute scores
-if binary_eval == False:
+if eval_mode == 'multi':
     compute_scores(X_test, Y_test, device, model, modality, source_path, batch_size, logging, boot_iter)
-else:
-
+elif eval_mode == 'binary':
     auprc_scores = {}
     auroc_scores = {}
 
