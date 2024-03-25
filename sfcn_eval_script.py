@@ -89,4 +89,4 @@ model.to(device)
 model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_{sampling}_epoch_{epoch}.pth"))
 
 # Compute scores
-compute_scores(X_test, Y_test, device, model, batch_size, logging, boot_iter)
+compute_scores(X_test, Y_test, device, model, modality, source_path, batch_size, logging, boot_iter)

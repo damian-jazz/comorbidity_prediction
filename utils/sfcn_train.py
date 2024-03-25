@@ -178,11 +178,11 @@ def eval(dataloader, device, model):
 
     return y_prob, y_pred
 
-def compute_atomic(X_test, Y_test, device, model, batch_size, iteration):
+def compute_atomic(X_test, Y_test, device, model, modality, source_path, batch_size, iteration):
         
         X_test_resampled, y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+iteration)
         
-        eval_set = DatasetBrainImages(X_test_resampled, y_test_resampled)
+        eval_set = DatasetBrainImages(X_test_resampled, y_test_resampled, modality=modality, source_path=source_path)
         eval_loader = DataLoader(eval_set, batch_size=batch_size, shuffle=False)
         Y_prob, Y_pred  = eval(eval_loader, device, model)
         
@@ -216,7 +216,7 @@ def compute_atomic(X_test, Y_test, device, model, batch_size, iteration):
 
         return score_dict
   
-def compute_scores(X_test, Y_test, device, model, batch_size, logging, boot_iter):
+def compute_scores(X_test, Y_test, device, model, modality, source_path, batch_size, logging, boot_iter):
 
     score_dict = {
             'auprc_macro': [],
@@ -235,7 +235,7 @@ def compute_scores(X_test, Y_test, device, model, batch_size, logging, boot_iter
     scores = []
     for i in range(boot_iter):
         logging.info(f"Bootstrapping iteration {i}")
-        scores.append(compute_atomic(X_test, Y_test, device, model, batch_size, i))
+        scores.append(compute_atomic(X_test, Y_test, device, model, modality, source_path, batch_size, i))
 
     # Aggregate scores
     for k,_ in score_dict.items():
