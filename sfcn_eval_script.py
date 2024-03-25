@@ -120,9 +120,9 @@ else:
         eval_loader = DataLoader(eval_set, batch_size=batch_size, shuffle=False)
         Y_prob, _  = eval(eval_loader, device, model)
     
-        for label in Y_test.columns:
-             auprc_scores[label].append(average_precision_score(Y_test_resampled[label], Y_prob[label]))
-             auroc_scores[label].append(roc_auc_score(Y_test_resampled[label], Y_prob[label]))
+        for i, label in enumerate(Y_test.columns):
+             auprc_scores[label].append(average_precision_score(Y_test_resampled.iloc[:, i], Y_prob[:, i]))
+             auroc_scores[label].append(roc_auc_score(Y_test_resampled.iloc[:, i], Y_prob[:, i]))
 
     logging.info(f"Mean scores with SE and 95% confidence intervals:")
     logging.info(f"AUPRC:")
