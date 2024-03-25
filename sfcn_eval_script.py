@@ -3,12 +3,17 @@ import os
 import argparse
 import logging
 
-from utils.utils import load_data, generate_undersampled_set
+import pandas as pd
+import numpy as np
+
+from utils.utils import load_data
 from utils.sfcn_utils import DatasetBrainImages
-from utils.sfcn_train import compute_scores
+from utils.sfcn_train import compute_scores, eval
 from utils.sfcn_model import SFCN
 
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 import torch
 from torch.utils.data import DataLoader
@@ -24,6 +29,7 @@ parser.add_argument("-modality", type=str, default="T1w")
 parser.add_argument("-loss", type=str, default="bce")
 parser.add_argument("-sampling", type=str, default="none")
 parser.add_argument("-boot_iter", type=int, default=1)
+parser.add_argument("-binary_eval", type=bool, default=False)
 parser.add_argument("-source_path", type=str, default="/t1images/")
 
 # Parse the arguments
@@ -36,6 +42,7 @@ modality = args.modality
 loss = args.loss # loss required for checkpoint loading
 sampling = args.sampling
 boot_iter = args.boot_iter
+binary_eval = args.binary_eval
 source_path = args.source_path
 
 # Set up paths
@@ -44,11 +51,19 @@ logs_path = base_path + "logs/"
 checkpoints_path = base_path + "checkpoints/"
 
 # Configure logging settings
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}.log',
-                    filemode='w')
+if binary_eval == False:
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}.log',
+                        filemode='w')
+else:
+        logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename=f'{logs_path}evaluation_run_{run}_epoch_{epoch}__{modality}_{loss}_{sampling}_{boot_iter}_binary.log',
+                        filemode='w')
+
 console = logging.StreamHandler(sys.stdout)
 console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
@@ -65,6 +80,7 @@ logging.info(f"epoch: {epoch}")
 logging.info(f"modality: {modality}")
 logging.info(f"loss: {loss}")
 logging.info(f"sampling: {sampling}")
+logging.info(f"binary_eval: {binary_eval}")
 logging.info(f"boot_iter: {boot_iter}")
 
 # Device
@@ -76,9 +92,6 @@ X, _, Y = load_data('classification_t1')
 X, Y = X.iloc[:,0], Y.iloc[:,1:]
 _, X_test, _, Y_test = train_test_split(X, Y, test_size=0.25, random_state=0)
 
-# Create dataset
-test_data = DatasetBrainImages(X_test, Y_test, modality=modality, source_path=source_path)
-
 # Set batch size
 batch_size = 8
 logging.info(f"batch size: {batch_size}")
@@ -89,4 +102,32 @@ model.to(device)
 model.load_state_dict(torch.load(checkpoints_path + f"run_{run}_sfcn_{modality}_{loss}_{sampling}_epoch_{epoch}.pth"))
 
 # Compute scores
-compute_scores(X_test, Y_test, device, model, modality, source_path, batch_size, logging, boot_iter)
+if binary_eval == False:
+    compute_scores(X_test, Y_test, device, model, modality, source_path, batch_size, logging, boot_iter)
+else:
+
+    auprc_scores = {}
+    auroc_scores = {}
+
+    for label in Y_test.columns:
+         auprc_scores[label] = []
+         auroc_scores[label] = []
+
+    for i in range(boot_iter):
+        X_test_resampled, Y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
+
+        eval_set = DatasetBrainImages(X_test_resampled, Y_test_resampled, modality=modality, source_path=source_path)
+        eval_loader = DataLoader(eval_set, batch_size=batch_size, shuffle=False)
+        Y_prob, _  = eval(eval_loader, device, model)
+    
+        for label in Y_test.columns:
+             auprc_scores[label].append(average_precision_score(Y_test_resampled[label], Y_prob[label]))
+             auroc_scores[label].append(roc_auc_score(Y_test_resampled[label], Y_prob[label]))
+
+    logging.info(f"Mean scores with SE and 95% confidence intervals:")
+    logging.info(f"AUPRC:")
+    for k,v in auprc_scores.items():
+        logging.info(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+    logging.info(f"AUROC:")
+    for k,v in auroc_scores.items():
+        logging.info(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")

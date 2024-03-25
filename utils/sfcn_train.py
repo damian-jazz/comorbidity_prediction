@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from utils.sfcn_utils import DatasetBrainImages
 from sklearn.utils import resample
-from sklearn.metrics import roc_auc_score, average_precision_score, roc_auc_score, brier_score_loss, f1_score, hamming_loss, balanced_accuracy_score, accuracy_score
+from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_loss, f1_score, hamming_loss, balanced_accuracy_score, accuracy_score
 
 ##### bce loss #####
 
