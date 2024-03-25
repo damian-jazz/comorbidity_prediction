@@ -21,7 +21,7 @@ color_palette = [
 ########## UMAP ###########
 
 def plot_umap(df: pd.DataFrame, tag: str):
-    umap = UMAP()
+    umap = UMAP(random_state=33)
     ebd = umap.fit_transform(df)
     
     fig = plt.figure(1,(5,4))
@@ -49,7 +49,7 @@ def plot_umap_combined(X: pd.DataFrame, Y: pd.DataFrame, tag: str):
     _, mean_ir_over = generate_label_stats(Y_over, True)
 
     # Fit umap
-    umap = UMAP()
+    umap = UMAP(random_state=33)
     ebd_1 = umap.fit_transform(Y)
     ebd_2 = umap.fit_transform(Y_under)
     ebd_3 = umap.fit_transform(Y_over)
@@ -83,7 +83,7 @@ def plot_umap_combined(X: pd.DataFrame, Y: pd.DataFrame, tag: str):
 
 
 def plot_umap_cluster(df: pd.DataFrame, tag: str):
-    umap = UMAP()
+    umap = UMAP(random_state=33)
     ebd = umap.fit_transform(df)
     
     fig = plt.figure(1,(15,14))
