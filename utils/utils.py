@@ -655,7 +655,7 @@ def compute_global_scores_univariate(X_train, X_test, Y_train, Y_test, measure_l
                 model = LogisticRegression(max_iter=10000, n_jobs=-1).fit(f_train.to_numpy().reshape(-1,1), Y_train[y])    
 
             score = []
-            for i in range(100):
+            for i in range(boot_iter):
                 X_test_resampled, y_test_resampled = resample(f_test, Y_test[y], replace=True, n_samples=len(f_test), random_state=0+i)
                 
                 if metric == 'r2':
@@ -665,7 +665,7 @@ def compute_global_scores_univariate(X_train, X_test, Y_train, Y_test, measure_l
                     y_prob = model.predict_proba(X_test_resampled.to_numpy().reshape(-1,1))[:,1]
                     score.append(roc_auc_score(y_test_resampled, y_prob))
                 else:
-                    pass 
+                    pass
                 
             scores.append(np.mean(score))
 
@@ -684,7 +684,7 @@ def compute_auroc_scores_univariate(X_train, X_test, Y_train, Y_test, boot_iter)
             model = LogisticRegression(max_iter=10000, n_jobs=-1).fit(X_train[x].to_numpy().reshape(-1,1), Y_train[y])    
 
             score = []
-            for i in range(100):
+            for i in range(boot_iter):
                 X_test_resampled, y_test_resampled = resample(X_test[x], Y_test[y], replace=True, n_samples=len(Y_test), random_state=0+i)
                 y_prob = model.predict_proba(X_test_resampled.to_numpy().reshape(-1,1))[:,1]
                 score.append(roc_auc_score(y_test_resampled, y_prob))
