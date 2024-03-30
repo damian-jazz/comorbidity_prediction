@@ -10,31 +10,7 @@ from sklearn.metrics import PrecisionRecallDisplay, RocCurveDisplay
 plot_path = 'plots/'
 
 ########## Settings ###########
-
-# Color management
-
-color_palette = [
-    "lightseagreen",
-    "lightcoral",
-    "powderblue",
-    "steelblue",
-    "hotpink",
-    "seagreen"
-]
-
-#n_colors = 6
-#discrete_cmap = cm.get_cmap('viridis', n_colors)
-#color_palette = discrete_cmap(np.arange(n_colors))
-
-# Convert CSS color strings to RGBA tuples
-#css_colors = ["steelblue", "powderblue"]
-#rgba_tuples = [mcolors.to_rgb(color) + (1,) for color in css_colors]
-
-# Create custom colormap from RGBA tuples
-#cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', rgba_tuples)
-
-cmap = sns.color_palette("ch:start=.2,rot=-.3_r", as_cmap=True)
-#cmap = 'viridis'
+cmap = 'viridis'
 
 diagnosis_acronyms = ['TSD', 'DD', 'ADHD', 'MD', 'ASD', 'CD', 'OD', 'SLD', 'OCD', 'D', 'ID', 'ED', 'AD', 'NC']
 
@@ -66,18 +42,18 @@ def plot_demographics(df: pd.DataFrame, tag: str):
     fig = plt.figure(1,(14,4))
 
     plt.subplot(1,3,1)
-    g1 = sns.histplot(data=df, x='Age', bins=40, color=color_palette[3], edgecolor='white')
+    g1 = sns.histplot(data=df, x='Age', bins=40, edgecolor='white') # color=color_palette[3]
     g1.set(ylabel=None)
     g1.set_yticklabels([])
     g1.set_yticks([])
 
     plt.subplot(1,3,2)
-    g3 = sns.histplot(data=df, x='Site', hue='Sex', hue_order=hue_order, palette=color_palette[0:2], multiple='dodge', shrink=0.8, linewidth=0)
+    g3 = sns.histplot(data=df, x='Site', hue='Sex', hue_order=hue_order, multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[0:2]
     g3.bar_label(g3.containers[0], label_type='center')
     g3.bar_label(g3.containers[1], label_type='center')
 
     plt.subplot(1,3,3)
-    sns.violinplot(data=df, x='Site', y='Age', hue='Sex', palette=color_palette[0:2], density_norm='count', inner='quart', legend=None, fill=False, split=True, gap=0.2)
+    sns.violinplot(data=df, x='Site', y='Age', hue='Sex', density_norm='count', inner='quart', legend=None, fill=False, split=True, gap=0.2) # palette=color_palette[0:2]
 
     plt.suptitle(f"Demographic statistics for {tag} (n={df.shape[0]})")
     fig.savefig(plot_path + f'demographics_{tag}.svg', bbox_inches='tight')
@@ -86,12 +62,12 @@ def plot_demographics(df: pd.DataFrame, tag: str):
     
 def plot_diagnosis_frequency(df: pd.DataFrame, tag: str):
     fig = plt.figure(1,(17,4))
-    ax = sns.violinplot(data=df, x='Diagnosis', y='Age', hue="Sex", hue_order=hue_order, palette=color_palette[0:2], density_norm='width', inner='quart', legend=None, fill=False, split=True, gap=0.2)
+    ax = sns.violinplot(data=df, x='Diagnosis', y='Age', hue="Sex", hue_order=hue_order, density_norm='width', inner='quart', legend=None, fill=False, split=True, gap=0.2) # palette=color_palette[0:2],
     ax.set_axisbelow(True)
     #ax.grid(which='both', color='gray', alpha=0.1)
     ax.set_xticks(range(14), diagnosis_acronyms)
     ax.set(xlabel=None)
-    plt.title("Diagnosis frequency for age and sex")
+    plt.title("Diagnosis frequency for age and sex", fontsize=8)
 
     fig.savefig(plot_path + f'diagnosis_frequency_{tag}.svg', bbox_inches='tight')
 
@@ -99,7 +75,7 @@ def plot_diagnosis_prevalence(df: pd.DataFrame, tag: str):
     fig = plt.figure(1,(17,8))
     
     plt.subplot(2,1,1)
-    ax1 = sns.histplot(data=df, x='Diagnosis', hue="Sex", hue_order=hue_order, palette=color_palette[0:2], multiple='dodge', shrink=0.8, linewidth=0)
+    ax1 = sns.histplot(data=df, x='Diagnosis', hue="Sex", hue_order=hue_order, multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[0:2]
     ax1.set_axisbelow(True)
     #ax1.grid(which='both', color='gray', alpha=0.05)
     ax1.set_yticks(range(0,1200,200))
@@ -111,9 +87,9 @@ def plot_diagnosis_prevalence(df: pd.DataFrame, tag: str):
     
     plt.subplot(2,1,2)
     if case == 0:
-        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", palette=color_palette[2:], multiple='dodge', shrink=0.8, linewidth=0)
+        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[2:]
     elif case == 1:
-        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", palette=color_palette[2:-1], multiple='dodge', shrink=0.8, linewidth=0)
+        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[2:-1]
     else:
         pass
 
@@ -176,14 +152,14 @@ def plot_feature_confounder_relation(df: pd.DataFrame, f: str, c:str, c2:str, h_
     fig = plt.figure(1,(11,4))
     
     plt.subplot(1, 2, 1)
-    ax1 = sns.scatterplot(data=df[df[c2] == h_list[0]], x=c, y=f, s=2, color=color_palette[1])
+    ax1 = sns.scatterplot(data=df[df[c2] == h_list[0]], x=c, color='tab:blue', y=f, s=2) # color=color_palette[1]
     ax1.set_ylim(0.5, 2.3)
-    plt.title(f"{h_list[0]}")
+    plt.title(f"{h_list[0]}", fontsize=8)
 
     plt.subplot(1, 2, 2)
-    ax2 = sns.scatterplot(data=df[df[c2] == h_list[1]], x=c, y=f, s=2, color=color_palette[0])
+    ax2 = sns.scatterplot(data=df[df[c2] == h_list[1]], x=c, color='tab:orange', y=f, s=2) # color=color_palette[0]
     ax2.set_ylim(0.5, 2.3)
-    plt.title(f"{h_list[1]}")
+    plt.title(f"{h_list[1]}", fontsize=8)
 
     plt.suptitle(f"Relationship between {f} and {c}")
     fig.savefig(plot_path + f'relationship_{f}_{c}_with_{c2}.svg', bbox_inches='tight')
@@ -194,11 +170,12 @@ def plot_global_scores(df: pd.DataFrame, metric: str):
     if metric == 'r2':   
         plt.figure(1,(6,2))
         sns.heatmap(df, cmap=cmap, fmt=".2f", vmin=df.min(axis=None), vmax=df.max(axis=None))
-        plt.title(r"Mean $R^2$ scores for global features explaining confounders" + "\n")
+        plt.title(r"Mean $R^2$ scores for global features explaining confounders", y=1.05, fontsize=10)
         plt.savefig(plot_path + 'r2_features_confounder_global.svg', bbox_inches='tight')
     if metric == 'auroc':
+        plt.figure(1,(7,3))
         sns.heatmap(df, cmap=cmap, fmt=".2f", vmin=df.min(axis=None), vmax=df.max(axis=None))
-        plt.title(r"Mean AUROC scores for global features explaining diagnoses" + "\n")
+        plt.title(r"Mean AUROC scores for global features explaining diagnoses", y=1.05, fontsize=10)
         plt.savefig(plot_path + 'auroc_features_diagnoses_global.svg', bbox_inches='tight')
 
 def plot_subcortical_scores(score_dicts: dict, metric: str, measure_list, labels):
@@ -228,9 +205,10 @@ def plot_subcortical_scores(score_dicts: dict, metric: str, measure_list, labels
                 ax.set_xticks([], [])
                 ax.set(xlabel=None)
             
-            plt.title(f"{measure_list[index]}")
+            plt.title(f"{measure_list[index]}", fontsize=10)
 
-        plt.suptitle(r"Mean $R^2$ scores for roi-based subcortical features (aseg) explaining confounders" + "\n")
+        plt.suptitle(r"Mean $R^2$ scores for roi-based subcortical features (aseg) explaining confounders")
+        plt.subplots_adjust(top=0.95)
         plt.tight_layout()
         plt.savefig(f'{plot_path}r2_features_confounder_aseg.svg', bbox_inches='tight')
     
@@ -249,9 +227,10 @@ def plot_subcortical_scores(score_dicts: dict, metric: str, measure_list, labels
                 ax.set_xticks([], [])
                 ax.set(xlabel=None)
             
-            plt.title(f"{measure_list[index]}")
+            plt.title(f"{measure_list[index]}", fontsize=10)
 
-        plt.suptitle(r"Mean AUROC scores for roi-based subcortical features (aseg) explaining diagnoses" + "\n")
+        plt.suptitle(r"Mean AUROC scores for roi-based subcortical features (aseg) explaining diagnoses", y=0.99)
+        plt.subplots_adjust(top=0.95)
         plt.tight_layout()
         plt.savefig(f'{plot_path}auroc_features_diagnoses_aseg.svg', bbox_inches='tight')
     
@@ -268,7 +247,7 @@ def plot_cortical_scores(score_dicts: dict, metric: str, measure_list, labels, h
             global_vmax = df.max(axis=None)
 
     if metric == 'r2':   
-        plt.figure(1,(9,18))
+        plt.figure(1,(9,19))
         
         for index in range(len(measure_list)):
             df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
@@ -282,14 +261,15 @@ def plot_cortical_scores(score_dicts: dict, metric: str, measure_list, labels, h
                 ax.set_xticks([], [])
                 ax.set(xlabel=None)
             
-            plt.title(f"{measure_list[index]}")
+            plt.title(f"{measure_list[index]}", fontsize=10)
 
-        plt.suptitle(r"Mean $R^2$ " + f"scores for roi-based cortical features (aparc {h_tag}) explaining confounders" + "\n")
+        plt.suptitle(r"Mean $R^2$ " + f"scores for roi-based cortical features (aparc {h_tag}) explaining confounders", y=0.99)
+        plt.subplots_adjust(top=None)
         plt.tight_layout()
         plt.savefig(f'{plot_path}r2_features_confounder_aparc_{h_tag}.svg', bbox_inches='tight')
     
     if metric == 'auroc':
-        plt.figure(1,(10,23))
+        plt.figure(1,(10,24))
 
         for index in range(len(measure_list)):
             df = pd.DataFrame.from_dict(score_dicts[index], orient='index', columns=labels)
@@ -303,16 +283,17 @@ def plot_cortical_scores(score_dicts: dict, metric: str, measure_list, labels, h
                 ax.set_xticks([], [])
                 ax.set(xlabel=None)
             
-            plt.title(f"{measure_list[index]}")
+            plt.title(f"{measure_list[index]}", fontsize=10)
 
-        plt.suptitle(f"Mean AUROC scores for roi-based cortical features (aparc {h_tag}) explaining diagnoses" + "\n")
+        plt.suptitle(f"Mean AUROC scores for roi-based cortical features (aparc {h_tag}) explaining diagnoses", y=0.99)
+        plt.subplots_adjust(top=0.95)
         plt.tight_layout()
         plt.savefig(f'{plot_path}auroc_features_diagnoses_aparc_{h_tag}.svg', bbox_inches='tight')
 
 def plot_confounder_diagnoses_scores(df: pd.DataFrame):
     plt.figure(1,(5,2))
     sns.heatmap(df, cmap=cmap)
-    plt.title(r"AUROC scores for confounders explaining diagnoses" + "\n")
+    plt.title(r"AUROC scores for confounders explaining diagnoses", y=1.05, fontsize=10)
     plt.savefig(plot_path + 'auroc_confounder_diagnoses_global.svg', bbox_inches='tight')
 
 ########## PR and ROC curves ###########
@@ -333,16 +314,17 @@ def plot_pr_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: di
                 y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
                 y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
                 
-                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j], color=color_palette[0])
-                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j], color=color_palette[1])
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j]) # color=color_palette[0]
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j]) # color=color_palette[1]
                 
                 axs[i,j].set_title(f"{label}")
                 axs[i,j].legend(loc="best")
-                axs[i,j].set_xlabel("Recall", size=12)
-                axs[i,j].set_ylabel("Precision", size=12)
+                axs[i,j].set_xlabel("Recall", size=8)
+                axs[i,j].set_ylabel("Precision", size=8)
                 axs[i,j].set_xmargin(0.01)
                 axs[i,j].set_ymargin(0.01)
     
+    plt.suptitle(f"PR curves for separate binary classifiers", fontsize=10)
     fig.savefig(plot_path + f'pr_curves_{tag}.svg', bbox_inches='tight')
 
 def plot_roc_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: dict, hgb_estimators:dict, tag: str):
@@ -361,14 +343,15 @@ def plot_roc_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: d
                 y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
                 y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
                 
-                RocCurveDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j], color=color_palette[0])
-                RocCurveDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j], color=color_palette[1])
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j]) # color=color_palette[0]
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j]) # color=color_palette[1]
                 
                 axs[i,j].set_title(f"{label}")
                 axs[i,j].legend(loc="best")
-                axs[i,j].set_xlabel("False positive rate", size=12)
-                axs[i,j].set_ylabel("True positive rate", size=12)
+                axs[i,j].set_xlabel("False positive rate", size=8)
+                axs[i,j].set_ylabel("True positive rate", size=8)
                 axs[i,j].set_xmargin(0.01)
                 axs[i,j].set_ymargin(0.01)
     
+    plt.suptitle(f"ROC curves for separate binary classifiers", fontsize=10)
     fig.savefig(plot_path + f'roc_curves_{tag}.svg', bbox_inches='tight')
