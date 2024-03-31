@@ -58,24 +58,24 @@ def plot_umap_combined(X: pd.DataFrame, Y: pd.DataFrame, tag: str):
     fig = plt.figure(1,(11,4))
 
     plt.subplot(1, 3, 1)
-    ax1 = sns.scatterplot(x=ebd_1[:,0], y=ebd_1[:,1], s=2) # color=color_palette[3]
+    ax1 = sns.scatterplot(x=ebd_1[:,0], y=ebd_1[:,1], s=2) 
     ax1.set_xticks([], [])
     ax1.set_yticks([], [])
-    plt.title(f"Regular (n={Y.shape[0]}, mean-ir={mean_ir_regular:.1f})", fontsize=8)
+    plt.title(f"Regular (n={Y.shape[0]}, mean-ir={mean_ir_regular:.1f})", fontsize=10)
 
     plt.subplot(1, 3, 2)
-    ax2 = sns.scatterplot(x=ebd_2[:,0], y=ebd_2[:,1], s=2) # color=color_palette[3]
+    ax2 = sns.scatterplot(x=ebd_2[:,0], y=ebd_2[:,1], s=2) 
     ax2.set_xticks([], [])
     ax2.set_yticks([], [])
-    plt.title(f"Undersampled (n={Y_under.shape[0]}, mean-ir={mean_ir_under:.1f})", fontsize=8)
+    plt.title(f"Undersampled (n={Y_under.shape[0]}, mean-ir={mean_ir_under:.1f})", fontsize=10)
 
     plt.subplot(1, 3, 3)
-    ax3 = sns.scatterplot(x=ebd_3[:,0], y=ebd_3[:,1], s=2) # color=color_palette[3]
+    ax3 = sns.scatterplot(x=ebd_3[:,0], y=ebd_3[:,1], s=2) 
     ax3.set_xticks([], [])
     ax3.set_yticks([], [])
-    plt.title(f"Oversampled (n={Y_over.shape[0]}, mean-ir={mean_ir_over:.1f})", fontsize=8)
+    plt.title(f"Oversampled (n={Y_over.shape[0]}, mean-ir={mean_ir_over:.1f})", fontsize=10)
     
-    plt.suptitle(f"Scatter plots for labels in embedding space")
+    #plt.suptitle(f"Scatter plots for labels in embedding space")
     #plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     
     plt.tight_layout()
@@ -91,7 +91,7 @@ def plot_umap_cluster(df: pd.DataFrame, tag: str):
         plt.subplot(4, 4, k+1)
         selec = df[df.columns[k]] != 0
         plt.scatter(ebd[~selec,0], ebd[~selec,1], s=2, c='lightgray', alpha=.1)
-        plt.scatter(ebd[selec,0], ebd[selec,1], s=2, alpha=.6) # c=color_palette[3]
+        plt.scatter(ebd[selec,0], ebd[selec,1], s=2, alpha=.6)
         plt.title(df.columns[k], fontsize=8)
         plt.xticks([])
         plt.yticks([])

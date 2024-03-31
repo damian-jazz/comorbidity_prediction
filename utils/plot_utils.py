@@ -12,9 +12,11 @@ plot_path = 'plots/'
 ########## Settings ###########
 cmap = 'viridis'
 
+palette = ['tab:green', 'tab:red', 'tab:brown', 'tab:pink' ]
+
 diagnosis_acronyms = ['TSD', 'DD', 'ADHD', 'MD', 'ASD', 'CD', 'OD', 'SLD', 'OCD', 'D', 'ID', 'ED', 'AD', 'NC']
 
-hue_order = ['Female', 'Male']
+hue_order = ['Male', 'Female']
 
 ########## Helper methods ###########
 
@@ -39,23 +41,28 @@ def aggregate_diagnoses(C: pd.DataFrame, D: pd.DataFrame) -> pd.DataFrame:
 ########## Demographics ###########
 
 def plot_demographics(df: pd.DataFrame, tag: str):
-    fig = plt.figure(1,(14,4))
+    fig = plt.figure(1,(17,4))
 
     plt.subplot(1,3,1)
-    g1 = sns.histplot(data=df, x='Age', bins=40, edgecolor='white') # color=color_palette[3]
+    g1 = sns.histplot(data=df, x='Age', hue='Sex', hue_order=hue_order, bins=80, edgecolor='white', multiple='stack') 
     g1.set(ylabel=None)
     g1.set_yticklabels([])
     g1.set_yticks([])
+    g1.text(-0.1, 1.05, 'A', transform=g1.transAxes, size=18, weight='bold')
+
 
     plt.subplot(1,3,2)
-    g3 = sns.histplot(data=df, x='Site', hue='Sex', hue_order=hue_order, multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[0:2]
+    g3 = sns.histplot(data=df, x='Site', hue='Sex', hue_order=hue_order, legend=None, multiple='dodge', shrink=0.8, linewidth=0) 
     g3.bar_label(g3.containers[0], label_type='center')
     g3.bar_label(g3.containers[1], label_type='center')
+    g3.text(-0.1, 1.05, 'B', transform=g3.transAxes, size=18, weight='bold')
 
     plt.subplot(1,3,3)
-    sns.violinplot(data=df, x='Site', y='Age', hue='Sex', density_norm='count', inner='quart', legend=None, fill=False, split=True, gap=0.2) # palette=color_palette[0:2]
+    g4 = sns.violinplot(data=df, x='Site', y='Age', hue='Sex', density_norm='count', inner='quart', legend=None, fill=False, split=True, gap=0.2) 
+    g4.text(-0.1, 1.05, 'C', transform=g4.transAxes, size=18, weight='bold')
 
-    plt.suptitle(f"Demographic statistics for {tag} (n={df.shape[0]})")
+    #plt.suptitle(f"Demographic statistics for {tag} (n={df.shape[0]})")
+    fig.subplots_adjust(wspace=0.3)
     fig.savefig(plot_path + f'demographics_{tag}.svg', bbox_inches='tight')
 
 ########## Diagnoses ###########
@@ -67,39 +74,42 @@ def plot_diagnosis_frequency(df: pd.DataFrame, tag: str):
     #ax.grid(which='both', color='gray', alpha=0.1)
     ax.set_xticks(range(14), diagnosis_acronyms)
     ax.set(xlabel=None)
-    plt.title("Diagnosis frequency for age and sex", fontsize=8)
+    #plt.title("Diagnosis frequency for age and sex", fontsize=10)
 
     fig.savefig(plot_path + f'diagnosis_frequency_{tag}.svg', bbox_inches='tight')
 
 def plot_diagnosis_prevalence(df: pd.DataFrame, tag: str):
-    fig = plt.figure(1,(17,8))
-    
-    plt.subplot(2,1,1)
-    ax1 = sns.histplot(data=df, x='Diagnosis', hue="Sex", hue_order=hue_order, multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[0:2]
+    fig = plt.figure(1,(17,10))
+
+    plt.subplot(3,1,1)
+    ax1 = sns.histplot(data=df, x='Diagnosis', multiple='dodge', shrink=0.8, color='tab:purple',  linewidth=0) 
     ax1.set_axisbelow(True)
     #ax1.grid(which='both', color='gray', alpha=0.05)
-    ax1.set_yticks(range(0,1200,200))
+    ax1.bar_label(ax1.containers[0], label_type='center')
+    ax1.set_yticks(range(0,2000,400))
     ax1.set_xticks(range(14), [])
     ax1.set(xlabel=None)
     #plt.title("Diagnosis distribution for sex and site")
-    
-    case = 4 - df['Site'].nunique()
-    
-    plt.subplot(2,1,2)
-    if case == 0:
-        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[2:]
-    elif case == 1:
-        ax2 = sns.histplot(data=df, x='Diagnosis', hue="Site", multiple='dodge', shrink=0.8, linewidth=0) # palette=color_palette[2:-1]
-    else:
-        pass
 
+    plt.subplot(3,1,2)
+    ax2 = sns.histplot(data=df, x='Diagnosis', hue="Sex", hue_order=hue_order, multiple='dodge', shrink=0.8, linewidth=0) 
+    ax2.set_axisbelow(True)
+    #ax1.grid(which='both', color='gray', alpha=0.05)
+    ax2.set_yticks(range(0,1200,200))
+    ax2.set_xticks(range(14), [])
+    ax2.set(xlabel=None)
+    #plt.title("Diagnosis distribution for sex and site")
+    
+    plt.subplot(3,1,3)
+    ax3 = sns.histplot(data=df, x='Diagnosis', hue="Site", multiple='dodge', palette=palette, shrink=0.8, linewidth=0) 
     #ax2.grid(which='both', color='gray', alpha=0.05)
     #ax2.set_xticks(range(14), data['Diagnosis'].unique().tolist(), rotation=90)
-    ax2.set_xticks(range(14), diagnosis_acronyms)
-    ax2.set(xlabel=None)
+    ax3.set_yticks(range(0,900,150))
+    ax3.set_xticks(range(14), diagnosis_acronyms)
+    ax3.set(xlabel=None)
     #plt.title("Diagnosis distribution for site")
    
-    plt.suptitle(f"Diagnosis prevalence for sex and site")
+    #plt.suptitle(f"Diagnosis prevalence for sex and site")
     plt.subplots_adjust(left=None, bottom=None, right=None, top=0.95, wspace=None, hspace=0.05)
 
     fig.savefig(plot_path + f'diagnosis_prevalence_{tag}.svg', bbox_inches='tight')
@@ -152,12 +162,12 @@ def plot_feature_confounder_relation(df: pd.DataFrame, f: str, c:str, c2:str, h_
     fig = plt.figure(1,(11,4))
     
     plt.subplot(1, 2, 1)
-    ax1 = sns.scatterplot(data=df[df[c2] == h_list[0]], x=c, color='tab:blue', y=f, s=2) # color=color_palette[1]
+    ax1 = sns.scatterplot(data=df[df[c2] == h_list[0]], x=c, color='tab:blue', y=f, s=2)
     ax1.set_ylim(0.5, 2.3)
     plt.title(f"{h_list[0]}", fontsize=8)
 
     plt.subplot(1, 2, 2)
-    ax2 = sns.scatterplot(data=df[df[c2] == h_list[1]], x=c, color='tab:orange', y=f, s=2) # color=color_palette[0]
+    ax2 = sns.scatterplot(data=df[df[c2] == h_list[1]], x=c, color='tab:orange', y=f, s=2) 
     ax2.set_ylim(0.5, 2.3)
     plt.title(f"{h_list[1]}", fontsize=8)
 
@@ -207,7 +217,7 @@ def plot_subcortical_scores(score_dicts: dict, metric: str, measure_list, labels
             
             plt.title(f"{measure_list[index]}", fontsize=10)
 
-        plt.suptitle(r"Mean $R^2$ scores for roi-based subcortical features (aseg) explaining confounders")
+        plt.suptitle(r"Mean $R^2$ scores for roi-based subcortical features (aseg) explaining confounders", y=0.99)
         plt.subplots_adjust(top=0.95)
         plt.tight_layout()
         plt.savefig(f'{plot_path}r2_features_confounder_aseg.svg', bbox_inches='tight')
@@ -300,7 +310,7 @@ def plot_confounder_diagnoses_scores(df: pd.DataFrame):
     
 def plot_pr_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: dict, hgb_estimators:dict, tag: str):
     fig, axs = plt.subplots(4,4, figsize=(20, 20))
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
     counter = 0
     for i in range(0,4,1):
@@ -314,22 +324,22 @@ def plot_pr_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: di
                 y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
                 y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
                 
-                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j]) # color=color_palette[0]
-                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j]) # color=color_palette[1]
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j]) 
+                PrecisionRecallDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j]) 
                 
-                axs[i,j].set_title(f"{label}")
+                axs[i,j].set_title(f"{label}", fontsize=10)
                 axs[i,j].legend(loc="best")
                 axs[i,j].set_xlabel("Recall", size=8)
                 axs[i,j].set_ylabel("Precision", size=8)
                 axs[i,j].set_xmargin(0.01)
                 axs[i,j].set_ymargin(0.01)
     
-    plt.suptitle(f"PR curves for separate binary classifiers", fontsize=10)
+    fig.suptitle(f"PR curves for separate binary classifiers", y=0.91)
     fig.savefig(plot_path + f'pr_curves_{tag}.svg', bbox_inches='tight')
 
 def plot_roc_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: dict, hgb_estimators:dict, tag: str):
     fig, axs = plt.subplots(4,4, figsize=(20, 20))
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
     counter = 0
     for i in range(0,4,1):
@@ -343,15 +353,15 @@ def plot_roc_curves(X_test: pd.DataFrame, Y_test: pd.DataFrame, lr_estimators: d
                 y_prob_lr = lr_estimators[label].predict_proba(X_test)[:, 1] 
                 y_prob_hgb = hgb_estimators[label].predict_proba(X_test)[:, 1]
                 
-                RocCurveDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j]) # color=color_palette[0]
-                RocCurveDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j]) # color=color_palette[1]
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_lr, pos_label=1, name="LR", ax=axs[i,j])
+                RocCurveDisplay.from_predictions(Y_test[label], y_prob_hgb, pos_label=1, name="HGB", ax=axs[i,j])
                 
-                axs[i,j].set_title(f"{label}")
+                axs[i,j].set_title(f"{label}", fontsize=10)
                 axs[i,j].legend(loc="best")
                 axs[i,j].set_xlabel("False positive rate", size=8)
                 axs[i,j].set_ylabel("True positive rate", size=8)
                 axs[i,j].set_xmargin(0.01)
                 axs[i,j].set_ymargin(0.01)
     
-    plt.suptitle(f"ROC curves for separate binary classifiers", fontsize=10)
+    fig.suptitle(f"ROC curves for separate binary classifiers", y=0.91)
     fig.savefig(plot_path + f'roc_curves_{tag}.svg', bbox_inches='tight')
