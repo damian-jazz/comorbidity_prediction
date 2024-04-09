@@ -191,7 +191,9 @@ def load_measurement_labels():
     aseg_measurements = ["Area_mm2", "max", "mean", "nvertices", "nvoxels", "std", "volume"]
     aparc_measurements = ["volume", "area", "curvind", "foldind", "gauscurv", "meancurv", "thickness", "thickness.T1", "thicknessstd"]
     
-    return global_measurements, aseg_measurements, aparc_measurements
+    global_measurements_plot = ["brainsegvol", "brainsegvolnotvent", "lhcortexvol", "rhcortexvol", "cortexvol", "lhcerebralwhitemattervol", "rhcerebralwhitemattervol", "cerebralwhitemattervol", "subcortgrayvol", "totalgrayvol", "supratentorialvol", "supratentorialvolnotvent", "maskvol", "brainsegvol-to-etiv", "maskvol-to-etiv", "lhsurfaceholes", "rhsurfaceholes", "surfaceholes", "etiv"]
+
+    return global_measurements, aseg_measurements, aparc_measurements, global_measurements_plot
 
 
 ########## Helper methods ###########
@@ -243,6 +245,7 @@ def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
     """
     diagnosis_counts = dict()
     ir_dict = dict()
+    within_imbalance = dict()
 
     for name, _ in df.items():
         diagnosis_counts[name] = df[name].value_counts()[1]
@@ -251,11 +254,13 @@ def generate_label_stats(df: pd.DataFrame, mean_ir=False) -> pd.DataFrame:
 
     for k,v in diagnosis_counts.items():
         ir_dict[k] = (max_value / v)
+        within_imbalance[k] = (v / df.shape[0])
 
     stats = pd.DataFrame({
     'Absolute frequency': df.sum(),
     'Relative frequency': df.mean(),
     'Imbalance ratio': ir_dict.values(),
+    'Within-label imbalance': within_imbalance.values(),
     })
 
     mean_ratio = np.mean(list(ir_dict.values())) 
@@ -276,7 +281,7 @@ def pca_transform(df: pd.DataFrame, n_components=10, stats=False):
     if stats == False:
         return df_transformed
     else:
-        df_transformed, pca.explained_variance_ratio_
+        return df_transformed, pca.explained_variance_ratio_
 
 
 ########## Resampling ###########
@@ -598,6 +603,40 @@ def compute_auprc_auroc_scores(estimators, X_test, Y_test, boot_iter):
     print(f"\nAUROC:")
     for k,v in auroc_scores.items():
         print(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+def compute_auprc_auroc_scores_moc(estimator, X_test, Y_test, boot_iter):
+    auprc_scores = {}
+    auroc_scores = {}
+
+    for label in Y_test.columns:
+        auprc_scores[label] = []
+        auroc_scores[label] = []
+
+    for i in range(boot_iter):
+        X_test_resampled, Y_test_resampled = resample(X_test, Y_test, replace=True, n_samples=len(Y_test), random_state=0+i)
+
+        Y_prob = estimator.predict_proba(X_test_resampled)
+
+        # Combine prediction probas into single ndarray
+        Y_prob_merged = Y_prob[0][:,1].reshape(-1,1)
+        for i in range(1, len(Y_test.columns), 1):
+                Y_prob_merged = np.concatenate([Y_prob_merged, Y_prob[i][:,1].reshape(-1,1)], axis=1)
+
+        for i, label in enumerate(Y_test.columns):
+            auprc_scores[label].append(average_precision_score(Y_test_resampled.iloc[:, i], Y_prob_merged[:, i]))
+            auroc_scores[label].append(roc_auc_score(Y_test_resampled.iloc[:, i], Y_prob_merged[:, i]))
+
+    print(f"Mean scores with SE and 95% confidence intervals:\n")
+    
+    print(f"AUPRC:")
+    for k,v in auprc_scores.items():
+        print(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+    print(f"\nAUROC:")
+    for k,v in auroc_scores.items():
+        print(f"{(k + ':').ljust(50)}{np.mean(v):.2f} ({np.std(v):.2f}) [{np.percentile(v, 2.5):.2f}, {np.percentile(v, 97.5):.2f}]")
+
+
 
 ########## Univariate scoring ###########
         
